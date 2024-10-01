@@ -7,15 +7,7 @@
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    
-    <!-- Leaflet MarkerCluster CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
-    
-    <!-- Leaflet Search CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-search/dist/leaflet-search.min.css" />
-
-    <!-- Leaflet Measure CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
 
     <style>
         body {
@@ -29,28 +21,6 @@
             width: 100%;  /* Kortets bredde */
             margin: 0 auto;  /* Centrer kortet horisontalt */
             position: relative;
-        }
-        #search-container, #fullscreen-btn {
-            position: fixed;
-            z-index: 1000; /* Sørg for, at elementerne ligger over kortet */
-            background-color: #fff;
-            padding: 5px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        }
-        #search-container {
-            top: 75px;
-            left: 5px;
-            width: 250px; /* Gør søgebjælken mindre */
-        }
-        #search-input {
-            width: 100%;
-            padding: 5px;
-            box-sizing: border-box;
-        }
-        #fullscreen-btn {
-            top: 120px;
-            left: 5px;
         }
         h1 {
             text-align: center;
@@ -70,30 +40,16 @@
 </head>
 <body>
     <h1>Sanct Croix Anno 1799</h1>
-    <div id="search-container">
-        <input id="search-input" type="text" placeholder="Søg efter navne..."/>
-    </div>
-    <div id="fullscreen-btn">
-        <button id="fullscreen-toggle">Fuldskærm</button>
-    </div>
     <div id="map"></div>
     <div id="footer">Lavet af Erik Luis Lanuza Oehlerich</div>
 
     <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    
-    <!-- Leaflet MarkerCluster JavaScript -->
-    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-
-    <!-- Leaflet Search JavaScript -->
-    <script src="https://unpkg.com/leaflet-search/dist/leaflet-search.min.js"></script>
-
-    <!-- Leaflet Measure JavaScript -->
-    <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
 
     <script>
         // Initialiser kortet
-        var map = L.map('map').setView([17.7078539, -64.7131291], 15); // Centrer kortet
+        var map = L.map('map').setView([17.7421648, -64.7560983], 12); // Centrer kortet
 
         // Definer baggrundskortene
         var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -147,17 +103,10 @@
         osm.addTo(map);
         customTiles.addTo(map);
 
-        // Opret en marker cluster gruppe
-        var markers = L.markerClusterGroup({
-            spiderfyOnMaxZoom: true,
-            showCoverageOnHover: false,
-            zoomToBoundsOnClick: true
-        });
-
-        // Koordinater for markøren
+        // Markør med billede og CSV fil link
         var coordinates = [17.7078539, -64.7131291]; // Indsæt dine koordinater her
-        var image = 'https://example.com/image.jpg'; // Indsæt URL til dit billede her
-        var csvLink = 'https://example.com/data.csv'; // Indsæt URL til din CSV-fil her
+        var image = 'https://raw.githubusercontent.com/erikoehlerich/Sankt-croix-Anno-1799/point39/image.jpg'; // Indsæt URL til dit billede her
+        var csvLink = 'https://raw.githubusercontent.com/erikoehlerich/Sankt-croix-Anno-1799/point39/data.csv'; // Indsæt URL til din CSV-fil her
 
         // Opret en markør
         var marker = L.circleMarker(coordinates, {
@@ -170,49 +119,50 @@
             <strong>Navn: Sted 1</strong><br>
             <img src="${image}" alt="Billede" style="width:200px;height:auto;"><br>
             <a href="${csvLink}" target="_blank">Åbn CSV fil</a>
-        `);
+        `).addTo(map); // Tilføj markøren til kortet
 
-        // Tilføj markøren til kortet
-        markers.addLayer(marker);
-        map.addLayer(markers);
+        // Yderligere markører kan tilføjes her, hvis nødvendigt
+        // Eksempel på en anden markør
+        var anotherCoordinates = [17.745, -64.745]; // Indsæt koordinater for en anden markør
+        var anotherMarker = L.circleMarker(anotherCoordinates, {
+            radius: 8,
+            color: '#0077cc',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+        }).bindPopup("En anden markør.").addTo(map); // Tilføj den anden markør til kortet
 
-        // Tilføj måleværktøj
-        var measureControl = L.control.measure({
-            position: 'topright',
-            primaryLengthUnit: 'kilometers',
-            secondaryLengthUnit: 'meters',
-            primaryAreaUnit: 'sqmeters',
-            secondaryAreaUnit: 'hectares',
-            activeColor: '#FF8C00',
-            completedColor: '#FF8C00'
-        }).addTo(map);
+        // Måleværktøj
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        var drawControl = new L.Control.Draw({
+            edit: {
+                featureGroup: drawnItems
+            },
+            draw: {
+                polygon: false,
+                polyline: true,
+                rectangle: false,
+                circle: false,
+                marker: false
+            }
+        });
+        map.addControl(drawControl);
 
-        // Tilføj søgefunktionalitet
-        document.getElementById('search-input').addEventListener('input', function() {
-            var searchTerm = this.value.toLowerCase();
-
-            // Filtrer data baseret på søgeterm (her kan du tilføje din egen søgefunktionalitet)
-            // For nu lader vi det være tomt
+        // Når en polyline tegnes, tilføj den til drawnItems
+        map.on(L.Draw.Event.CREATED, function (event) {
+            var layer = event.layer;
+            drawnItems.addLayer(layer);
         });
 
-        // Fuldskærmsknap funktionalitet
-        document.getElementById('fullscreen-toggle').addEventListener('click', function() {
-            var mapElement = document.getElementById('map');
-            if (!document.fullscreenElement) {
-                mapElement.requestFullscreen();
-                this.textContent = 'Luk fuldskærm';
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                    this.textContent = 'Fuldskærm';
-                }
+        // Funktion til at vise koordinater når 0 trykkes
+        document.addEventListener('keydown', function(event) {
+            if (event.key === '0') {
+                var mouseCoordinates = map.mouseEventToLatLng(event); // Hent musens koordinater
+                alert('Koordinater: ' + mouseCoordinates.lat.toFixed(6) + ', ' + mouseCoordinates.lng.toFixed(6));
             }
         });
 
-        // Tilføj midterknap for at hente koordinater
-        map.on('mousedown', function(e) {
-            console.log("Klikket på: " + e.latlng);
-        });
     </script>
 </body>
 </html>

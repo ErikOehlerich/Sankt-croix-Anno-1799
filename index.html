@@ -7,10 +7,10 @@
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-
+    
     <!-- Leaflet MarkerCluster CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
-
+    
     <!-- Leaflet Search CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-search/dist/leaflet-search.min.css" />
 
@@ -25,21 +25,23 @@
             font-family: Arial, sans-serif;
         }
         #map {
-            height: 600px;
-            width: 100%;
+            height: 600px;  /* Kortets højde */
+            width: 100%;  /* Kortets bredde */
+            margin: 0 auto;  /* Centrer kortet horisontalt */
+            position: relative;
         }
         #search-container, #fullscreen-btn {
             position: fixed;
-            z-index: 1000;
+            z-index: 1000; /* Sørg for, at elementerne ligger over kortet */
             background-color: #fff;
             padding: 5px;
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         }
         #search-container {
-            top: 10px;
+            top: 75px;
             left: 5px;
-            width: 250px;
+            width: 250px; /* Gør søgebjælken mindre */
         }
         #search-input {
             width: 100%;
@@ -47,18 +49,8 @@
             box-sizing: border-box;
         }
         #fullscreen-btn {
-            top: 50px;
+            top: 120px;
             left: 5px;
-        }
-        #layer-control {
-            position: fixed;
-            top: 10px;
-            right: 5px;
-            z-index: 1000;
-            background-color: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         }
         h1 {
             text-align: center;
@@ -84,7 +76,6 @@
     <div id="fullscreen-btn">
         <button id="fullscreen-toggle">Fuldskærm</button>
     </div>
-    <div id="layer-control"></div> <!-- Container til lagkontrollen -->
     <div id="map"></div>
     <div id="footer">Lavet af Erik Luis Lanuza Oehlerich</div>
 
@@ -102,11 +93,11 @@
 
     <script>
         // Initialiser kortet
-        var map = L.map('map').setView([17.7078539, -64.7131291], 15); // Centrer kortet på dit punkt
+        var map = L.map('map').setView([17.7078539, -64.7131291], 15); // Centrer kortet
 
         // Definer baggrundskortene
-        var customTiles = L.tileLayer('https://storage.googleapis.com/sanct_croix1799/{z}/{x}/{y}.png', {
-            attribution: '© Google Cloud',
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19
         });
 
@@ -122,54 +113,68 @@
             maxZoom: 20
         });
 
-        // Tilføj dit tilpassede lag som standard
+        var mapbox = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=your.mapbox.access.token', {
+            attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a>',
+            id: 'mapbox/streets-v11',
+            tileSize: 512,
+            zoomOffset: -1,
+            maxZoom: 20
+        });
+
+        // Definer dine tile layers som overlay
+        var customTiles = L.tileLayer('https://storage.googleapis.com/sanct_croix1799/{z}/{x}/{y}.png', {
+            attribution: '© Google Cloud',
+            maxZoom: 19
+        });
+
+        // Tilføj baggrundskort som basislag
+        var baseLayers = {
+            "OpenStreetMap": osm,
+            "Google Satellite": googleSat,
+            "Google Streets": googleStreets,
+            "Mapbox Streets": mapbox
+        };
+
+        // Tilføj custom tiles som overlay og slå det til som standard
+        var overlays = {
+            "Custom Tiles": customTiles
+        };
+
+        // Tilføj baseLayers og overlays til kortet
+        L.control.layers(baseLayers, overlays).addTo(map);
+
+        // Tilføj OSM som standard baggrundskort
+        osm.addTo(map);
         customTiles.addTo(map);
 
-        // Tilføj OSM og Google som alternative lag
-        var baseLayers = {
-            "Custom Kort": customTiles, // Dit tilpassede lag
-            "Google Satellite": googleSat,
-            "Google Streets": googleStreets
-        };
-
-        // Tilføj lag kontrol til layer-control div'en
-        L.control.layers(baseLayers).addTo(map);
-
         // Opret en marker cluster gruppe
-        var markers = L.markerClusterGroup();
-
-        // Punkt med koordinater og sti til mappen
-        var point = { 
-            coords: [17.7078539, -64.7131291], 
-            folder: 'https://erikoehlerich.github.io/Sankt-croix-Anno-1799/point39' // URL til dit punkt
-        };
-
-        // Tilføj cirkelmarkør med popup
-        var circleMarker = L.circleMarker(point.coords, {
-            radius: 10,
-            color: 'red',
-            fillColor: '#f03',
-            fillOpacity: 0.5
-        }).bindPopup(`
-            <strong>Koordinater:</strong> ${point.coords[0]}, ${point.coords[1]}<br>
-            <strong>Billede:</strong> <img src="${point.folder}/image.png" alt="Billede" style="width:100px; height:auto;"><br>
-            <a href="${point.folder}/data.xlsx" target="_blank">Åbn Excel-fil</a>
-        `);
-        markers.addLayer(circleMarker);
-
-        // Tilføj markørerne til kortet
-        map.addLayer(markers);
-
-        // Tilføj søgefunktionalitet
-        document.getElementById('search-input').addEventListener('input', function() {
-            var searchTerm = this.value.toLowerCase();
-            markers.clearLayers(); // Ryd eksisterende markører
-
-            // Tjek om input matcher
-            if (point.folder.toLowerCase().includes(searchTerm)) {
-                markers.addLayer(circleMarker); // Tilføj cirkelmarkøren hvis den matcher
-            }
+        var markers = L.markerClusterGroup({
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true
         });
+
+        // Koordinater for markøren
+        var coordinates = [17.7078539, -64.7131291]; // Indsæt dine koordinater her
+        var image = 'https://example.com/image.jpg'; // Indsæt URL til dit billede her
+        var csvLink = 'https://example.com/data.csv'; // Indsæt URL til din CSV-fil her
+
+        // Opret en markør
+        var marker = L.circleMarker(coordinates, {
+            radius: 8,
+            color: '#ff7800',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+        }).bindPopup(`
+            <strong>Navn: Sted 1</strong><br>
+            <img src="${image}" alt="Billede" style="width:200px;height:auto;"><br>
+            <a href="${csvLink}" target="_blank">Åbn CSV fil</a>
+        `);
+
+        // Tilføj markøren til kortet
+        markers.addLayer(marker);
+        map.addLayer(markers);
 
         // Tilføj måleværktøj
         var measureControl = L.control.measure({
@@ -182,14 +187,31 @@
             completedColor: '#FF8C00'
         }).addTo(map);
 
-        // Fuldskærm funktionalitet
-        var fullscreenButton = document.getElementById('fullscreen-toggle');
-        fullscreenButton.addEventListener('click', function() {
+        // Tilføj søgefunktionalitet
+        document.getElementById('search-input').addEventListener('input', function() {
+            var searchTerm = this.value.toLowerCase();
+
+            // Filtrer data baseret på søgeterm (her kan du tilføje din egen søgefunktionalitet)
+            // For nu lader vi det være tomt
+        });
+
+        // Fuldskærmsknap funktionalitet
+        document.getElementById('fullscreen-toggle').addEventListener('click', function() {
+            var mapElement = document.getElementById('map');
             if (!document.fullscreenElement) {
-                map.requestFullscreen();
+                mapElement.requestFullscreen();
+                this.textContent = 'Luk fuldskærm';
             } else {
-                document.exitFullscreen();
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    this.textContent = 'Fuldskærm';
+                }
             }
+        });
+
+        // Tilføj midterknap for at hente koordinater
+        map.on('mousedown', function(e) {
+            console.log("Klikket på: " + e.latlng);
         });
     </script>
 </body>

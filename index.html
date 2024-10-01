@@ -141,7 +141,7 @@
         // Punkt med koordinater og sti til mappen
         var point = { 
             coords: [17.7078539, -64.7131291], 
-            folder: '/Point39' // Sti til dit punkt
+            folder: 'https://erikoehlerich.github.io/Sankt-croix-Anno-1799/point39' // URL til dit punkt
         };
 
         // Tilføj cirkelmarkør med popup
@@ -182,39 +182,15 @@
             completedColor: '#FF8C00'
         }).addTo(map);
 
-        // Fuldskærmsknap funktionalitet
-        document.getElementById('fullscreen-toggle').addEventListener('click', function() {
-            var mapElement = document.getElementById('map');
+        // Fuldskærm funktionalitet
+        var fullscreenButton = document.getElementById('fullscreen-toggle');
+        fullscreenButton.addEventListener('click', function() {
             if (!document.fullscreenElement) {
-                mapElement.requestFullscreen();
-                this.textContent = 'Luk fuldskærm';
+                map.requestFullscreen();
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                    this.textContent = 'Fuldskærm';
-                }
+                document.exitFullscreen();
             }
         });
-
-        // Kopier koordinater i Google Maps-format til udklipsholderen ved klik på kortet
-        map.on('click', function(e) {
-            var lat = e.latlng.lat.toFixed(7);
-            var lng = e.latlng.lng.toFixed(7);
-            var zoom = map.getZoom();
-            var copyText = `@${lat},${lng},${zoom}`;
-            copyToClipboard(copyText);
-            alert('Koordinater kopieret til udklipsholderen: ' + copyText);
-        });
-
-        function copyToClipboard(text) {
-            var tempInput = document.createElement('input');
-            tempInput.style = 'position: absolute; left: -1000px; top: -1000px';
-            tempInput.value = text;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-        }
     </script>
 </body>
 </html>

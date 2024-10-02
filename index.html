@@ -22,7 +22,6 @@
         #map {
             height: 600px;  /* Kortets højde */
             width: 100%;  /* Kortets bredde */
-            margin: 0 auto;  /* Centrer kortet horisontalt */
             position: relative;
         }
         h1 {
@@ -62,36 +61,23 @@
         th {
             background-color: #f2f2f2;
         }
-        /* Fuldskærm stil til Excel */
-        .fullscreen-excel {
-            display: none; /* Skjult som standard */
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.9); /* Mørk baggrund */
-            color: white;
-            z-index: 1001; /* Højere end kortet */
-            overflow: auto;
-            padding: 20px;
+        /* Værktøjsboks stil */
+        .tools-container {
+            position: fixed; /* Flyt værktøjsboksen til fixed position */
+            bottom: 200x; /* Placering til venstre */
+            left: 50%; /* Placering til venstre */
+            background-color: white;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000; /* Højere end kortet */
+            margin-bottom: 20px; /* Margin til at forhindre overlap */
         }
-        .fullscreen-excel table {
-            color: black; /* Sort tekst i tabellen */
-            background: white; /* Hvid baggrund for tabellen */
+        .tools-container.measure {
+            left: 40%;
         }
-        /* Stil til koordinatværktøjet */
-        .coordinate-tool {
-            background: white;
-            padding: 5px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            cursor: pointer;
-            text-align: center;
-            position: absolute;
-            top: 10px; /* Placerer værktøjet lidt ned fra toppen */
-            left: 10px; /* Placerer værktøjet lidt ind fra venstre */
-            z-index: 1000; /* Sørger for at værktøjet er ovenfor kortet */
+        .tools-container.coordinates {
+            left: 55%; /* Skift til højre for koordinatværktøjet */
+            margin-bottom: 70px; /* Øg margin til at forhindre overlap med footer */
         }
     </style>
 </head>
@@ -100,6 +86,19 @@
     <div id="map"></div>
     <div id="footer">Lavet af Erik Luis Lanuza Oehlerich</div>
     
+    <!-- Værktøjer -->
+    <div class="tools-container measure">
+        <h3>Måleværktøj</h3>
+        <button id="measureBtn">Aktiver Måleværktøj</button>
+        <button id="stopMeasureBtn" style="display:none;">Deaktiver Måleværktøj</button>
+    </div>
+    
+    <div class="tools-container coordinates">
+        <h3>Kordinat Vælger</h3>
+        <button id="coordinateBtn">Aktiver Kordinat Vælger</button>
+        <button id="stopCoordinateBtn" style="display:none;">Deaktiver Kordinat Vælger</button>
+    </div>
+
     <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
@@ -162,8 +161,8 @@
 
         // Markør med billede og Excel fil link
         var coordinates = [17.7078539, -64.7131291]; // Indsæt dine koordinater her
-        var image = 'Sankt-croix-Anno-1799/Point39/39.jpg'; // Korrekt sti til billede
-        var excelLink = 'Sankt-croix-Anno-1799/Point39/2_table_39.xlsx'; // Korrekt sti til Excel-fil
+        var image = 'https://raw.githubusercontent.com/ErikOehlerich/Sankt-croix-Anno-1799/main/Point39/39.jpg'; // Korrekt sti til billede
+        var excelLink = 'https://raw.githubusercontent.com/ErikOehlerich/Sankt-croix-Anno-1799/main/Point39/2_table_39.xlsx'; // Korrekt sti til Excel-fil
 
         // Opret en markør
         var marker = L.circleMarker(coordinates, {
@@ -193,129 +192,102 @@
             img.style.position = 'fixed';
             img.style.top = '0';
             img.style.left = '0';
-            img.style.zIndex = '1000';
-            img.style.backgroundColor = 'rgba(0, 0, 0, 0.9)'; // Mørk baggrund
-            img.style.cursor = 'pointer';
-
+            img.style.zIndex = '10000'; // Sørg for, at billedet er oven på alt andet
             img.onclick = function() {
-                document.body.removeChild(img); // Lukker billedet ved klik
+                document.body.removeChild(img); // Luk fuldskærm ved at klikke
             };
             document.body.appendChild(img); // Tilføj billedet til body
         }
 
-        // Funktion til at læse Excel fil
+        // Funktion til at læse Excel-filen og vise indholdet
         function readExcel(file) {
-            const url = file;
-            fetch(url)
-                .then(response => response.arrayBuffer())
-                .then(data => {
-                    const workbook = XLSX.read(data); // Læs Excel fil
-                    const sheetName = workbook.SheetNames[0];
-                    const sheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet); // Konverter til JSON
-                    displayExcelData(jsonData); // Vis data i popup
-                })
-                .catch(error => {
-                    console.error('Fejl ved indlæsning af Excel fil:', error);
-                });
-        }
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', file, true);
+            xhr.responseType = 'arraybuffer';
 
-        // Funktion til at vise Excel-data i popup
-        function displayExcelData(data) {
-            let table = '<table><tr>';
-            // Opret overskrifter baseret på objektets keys
-            for (let key in data[0]) {
-                table += `<th>${key}</th>`;
-            }
-            table += '</tr>';
+            xhr.onload = function(e) {
+                var data = new Uint8Array(xhr.response);
+                var workbook = XLSX.read(data, { type: 'array' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
 
-            // Fyld tabellen med data
-            data.forEach(row => {
-                table += '<tr>';
-                for (let key in row) {
-                    table += `<td>${row[key]}</td>`;
-                }
-                table += '</tr>';
-            });
-
-            table += '</table>';
-            document.getElementById('excelContent').innerHTML = table;
-        }
-
-        // Fuldskærms Excel-visning
-        function showExcelFullscreen() {
-            var excelContent = document.getElementById('excelContent').innerHTML;
-            var fullscreenDiv = document.createElement('div');
-            fullscreenDiv.className = 'fullscreen-excel';
-            fullscreenDiv.innerHTML = `
-                <div class="fullscreen-excel-content">
-                    ${excelContent}
-                    <button onclick="closeFullscreenExcel()">Luk Fuldskærm</button>
-                </div>
-            `;
-            document.body.appendChild(fullscreenDiv);
-            fullscreenDiv.style.display = 'block'; // Vis elementet
-        }
-
-        function closeFullscreenExcel() {
-            var fullscreenDiv = document.querySelector('.fullscreen-excel');
-            fullscreenDiv.remove(); // Fjern fuldskærms Excel
-        }
-
-        // Interaktivt koordinatværktøj
-        let isCoordToolActive = false;
-
-        // Opret en brugerdefineret kontrol til at aktivere/deaktivere koordinatværktøjet
-        var coordTool = L.control({ position: 'topleft' });
-        coordTool.onAdd = function (map) {
-            var div = L.DomUtil.create('div', 'coordinate-tool');
-            div.innerHTML = '<button id="coordToolButton">Aktiver Koordinatværktøj</button>'; // Knappen til at aktivere værktøjet
-            div.onclick = function () {
-                isCoordToolActive = !isCoordToolActive; // Skift tilstand
-                div.querySelector('#coordToolButton').innerText = isCoordToolActive ? 'Deaktiver Koordinatværktøj' : 'Aktiver Koordinatværktøj';
+                // Generer HTML fra Excel-data
+                var html = XLSX.utils.sheet_to_html(worksheet, { header: 1 });
+                document.getElementById('excelContent').innerHTML = html;
             };
-            return div;
-        };
-        coordTool.addTo(map);
 
-        // Når brugeren klikker på kortet
-        map.on('click', function (e) {
-            if (isCoordToolActive) {
-                var lat = e.latlng.lat.toFixed(6);
-                var lng = e.latlng.lng.toFixed(6);
-                alert(`Koordinater: ${lat}, ${lng}`); // Viser koordinaterne i en alert
-            }
-        });
+            xhr.send();
+        }
 
-        // Funktion til at måle afstande
-        var drawnItems = new L.FeatureGroup().addTo(map);
+        // Funktion til at vise Excel i fuldskærm
+        function showExcelFullscreen() {
+            const excelContent = document.getElementById('excelContent');
+            const fullScreenDiv = document.createElement('div');
+            fullScreenDiv.style.position = 'fixed';
+            fullScreenDiv.style.top = '0';
+            fullScreenDiv.style.left = '0';
+            fullScreenDiv.style.width = '100%';
+            fullScreenDiv.style.height = '100%';
+            fullScreenDiv.style.backgroundColor = 'white';
+            fullScreenDiv.style.zIndex = '10000';
+            fullScreenDiv.style.overflow = 'auto';
+            fullScreenDiv.innerHTML = `<h2>Excel Indhold</h2>${excelContent.innerHTML}`;
+            fullScreenDiv.onclick = function() {
+                document.body.removeChild(fullScreenDiv); // Luk fuldskærm ved at klikke
+            };
+            document.body.appendChild(fullScreenDiv); // Tilføj fuldskærm div til body
+        }
+
+        // Aktiver måleværktøj
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
         var drawControl = new L.Control.Draw({
             edit: {
                 featureGroup: drawnItems
             },
             draw: {
+                polygon: true,
                 polyline: true,
-                polygon: false,
-                circle: false,
-                rectangle: false,
-                marker: false
+                rectangle: true,
+                circle: true,
+                marker: true,
+                circlemarker: false
             }
         });
 
-        map.addControl(drawControl);
+        document.getElementById('measureBtn').onclick = function() {
+            map.addControl(drawControl);
+            document.getElementById('measureBtn').style.display = 'none';
+            document.getElementById('stopMeasureBtn').style.display = 'inline';
+        };
 
-        // Når en polyline tegnes, vis afstand
-        map.on(L.Draw.Event.CREATED, function(event) {
-            var layer = event.layer;
-            drawnItems.addLayer(layer);
-            var latLngs = layer.getLatLngs();
-            var distance = 0;
+        document.getElementById('stopMeasureBtn').onclick = function() {
+            map.removeControl(drawControl);
+            document.getElementById('measureBtn').style.display = 'inline';
+            document.getElementById('stopMeasureBtn').style.display = 'none';
+        };
 
-            for (var i = 0; i < latLngs.length - 1; i++) {
-                distance += latLngs[i].distanceTo(latLngs[i + 1]); // Beregn afstand mellem punkter
+        // Aktiver koordinatvælger
+        map.on('click', function(e) {
+            if (document.getElementById('coordinateBtn').style.display === 'none') {
+                alert("Koordinater: " + e.latlng.toString());
             }
+        });
 
-            alert("Total afstand: " + (distance / 1000).toFixed(2) + " km"); // Vis afstand i km
+        document.getElementById('coordinateBtn').onclick = function() {
+            document.getElementById('coordinateBtn').style.display = 'none';
+            document.getElementById('stopCoordinateBtn').style.display = 'inline';
+        };
+
+        document.getElementById('stopCoordinateBtn').onclick = function() {
+            document.getElementById('coordinateBtn').style.display = 'inline';
+            document.getElementById('stopCoordinateBtn').style.display = 'none';
+        };
+
+        // Håndter tegningsfunktionalitet
+        map.on(L.Draw.Event.CREATED, function(e) {
+            var layer = e.layer;
+            drawnItems.addLayer(layer);
         });
     </script>
 </body>

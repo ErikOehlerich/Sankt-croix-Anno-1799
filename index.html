@@ -64,20 +64,18 @@
         /* Værktøjsboks stil */
         .tools-container {
             position: fixed; /* Flyt værktøjsboksen til fixed position */
-            bottom: 200x; /* Placering til venstre */
-            left: 50%; /* Placering til venstre */
+            bottom: 20px; /* Placering til venstre */
+            left: 10%; /* Placering til venstre */
             background-color: white;
             padding: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             z-index: 1000; /* Højere end kortet */
-            margin-bottom: 20px; /* Margin til at forhindre overlap */
         }
         .tools-container.measure {
-            left: 40%;
+            left: 10%;
         }
         .tools-container.coordinates {
             left: 55%; /* Skift til højre for koordinatværktøjet */
-            margin-bottom: 70px; /* Øg margin til at forhindre overlap med footer */
         }
     </style>
 </head>
@@ -161,8 +159,8 @@
 
         // Markør med billede og Excel fil link
         var coordinates = [17.7078539, -64.7131291]; // Indsæt dine koordinater her
-        var image = 'https://raw.githubusercontent.com/ErikOehlerich/Sankt-croix-Anno-1799/main/Point39/39.jpg'; // Korrekt sti til billede
-        var excelLink = 'https://raw.githubusercontent.com/ErikOehlerich/Sankt-croix-Anno-1799/main/Point39/2_table_39.xlsx'; // Korrekt sti til Excel-fil
+        var image = 'Point39/39.jpg'; // Korrekt sti til billede
+        var excelLink = 'Point39/2_table_39.xlsx'; // Korrekt sti til Excel-fil
 
         // Opret en markør
         var marker = L.circleMarker(coordinates, {
@@ -192,102 +190,128 @@
             img.style.position = 'fixed';
             img.style.top = '0';
             img.style.left = '0';
-            img.style.zIndex = '10000'; // Sørg for, at billedet er oven på alt andet
+            img.style.zIndex = '10000'; // Sørg for, at billedet er oven på alt
             img.onclick = function() {
-                document.body.removeChild(img); // Luk fuldskærm ved at klikke
+                document.body.removeChild(img); // Luk billedet ved at klikke
             };
             document.body.appendChild(img); // Tilføj billedet til body
         }
 
-        // Funktion til at læse Excel-filen og vise indholdet
+        // Funktion til at læse Excel fil
         function readExcel(file) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', file, true);
-            xhr.responseType = 'arraybuffer';
-
-            xhr.onload = function(e) {
-                var data = new Uint8Array(xhr.response);
-                var workbook = XLSX.read(data, { type: 'array' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Generer HTML fra Excel-data
-                var html = XLSX.utils.sheet_to_html(worksheet, { header: 1 });
-                document.getElementById('excelContent').innerHTML = html;
-            };
-
-            xhr.send();
+            fetch(file)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Netværksfejl: ' + response.statusText);
+                    }
+                    return response.arrayBuffer(); // Brug arrayBuffer i stedet for blob
+                })
+                .then(data => {
+                    var workbook = XLSX.read(data, { type: 'array' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+                    var html = XLSX.utils.sheet_to_html(worksheet);
+                    document.getElementById('excelContent').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Fejl ved indlæsning af Excel fil:', error);
+                    alert('Der opstod en fejl ved indlæsning af Excel filen. Kontroller filens format og indhold.');
+                });
         }
 
         // Funktion til at vise Excel i fuldskærm
         function showExcelFullscreen() {
             const excelContent = document.getElementById('excelContent');
-            const fullScreenDiv = document.createElement('div');
-            fullScreenDiv.style.position = 'fixed';
-            fullScreenDiv.style.top = '0';
-            fullScreenDiv.style.left = '0';
-            fullScreenDiv.style.width = '100%';
-            fullScreenDiv.style.height = '100%';
-            fullScreenDiv.style.backgroundColor = 'white';
-            fullScreenDiv.style.zIndex = '10000';
-            fullScreenDiv.style.overflow = 'auto';
-            fullScreenDiv.innerHTML = `<h2>Excel Indhold</h2>${excelContent.innerHTML}`;
-            fullScreenDiv.onclick = function() {
-                document.body.removeChild(fullScreenDiv); // Luk fuldskærm ved at klikke
-            };
-            document.body.appendChild(fullScreenDiv); // Tilføj fuldskærm div til body
+            if (excelContent.innerHTML) {
+                const excelPopup = document.createElement('div');
+                excelPopup.innerHTML = excelContent.innerHTML; // Kopier indholdet
+                excelPopup.style.position = 'fixed';
+                excelPopup.style.top = '0';
+                excelPopup.style.left = '0';
+                excelPopup.style.width = '100%';
+                excelPopup.style.height = '100%';
+                excelPopup.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                excelPopup.style.overflow = 'auto'; // Tillader scrolling
+                excelPopup.style.zIndex = '10000';
+                excelPopup.onclick = function() {
+                    document.body.removeChild(excelPopup); // Luk Excel-vinduet ved klik
+                };
+                document.body.appendChild(excelPopup);
+            } else {
+                alert('Ingen Excel-data til at vise.');
+            }
         }
 
-        // Aktiver måleværktøj
+        // Måleværktøj
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
+
         var drawControl = new L.Control.Draw({
             edit: {
                 featureGroup: drawnItems
             },
             draw: {
-                polygon: true,
-                polyline: true,
-                rectangle: true,
-                circle: true,
-                marker: true,
-                circlemarker: false
+                polygon: false,
+                circle: false,
+                rectangle: false,
+                marker: false
             }
         });
 
+        map.addControl(drawControl);
+
+        // Aktivér måleværktøj
         document.getElementById('measureBtn').onclick = function() {
             map.addControl(drawControl);
             document.getElementById('measureBtn').style.display = 'none';
-            document.getElementById('stopMeasureBtn').style.display = 'inline';
+            document.getElementById('stopMeasureBtn').style.display = 'block';
         };
 
+        // Stop måleværktøj
         document.getElementById('stopMeasureBtn').onclick = function() {
             map.removeControl(drawControl);
-            document.getElementById('measureBtn').style.display = 'inline';
+            document.getElementById('measureBtn').style.display = 'block';
             document.getElementById('stopMeasureBtn').style.display = 'none';
         };
 
-        // Aktiver koordinatvælger
-        map.on('click', function(e) {
-            if (document.getElementById('coordinateBtn').style.display === 'none') {
-                alert("Koordinater: " + e.latlng.toString());
+        // Koordinatværktøj
+        var coordinatesDrawnItems = new L.FeatureGroup();
+        map.addLayer(coordinatesDrawnItems);
+
+        var coordinateControl = new L.Control.Draw({
+            edit: {
+                featureGroup: coordinatesDrawnItems
+            },
+            draw: {
+                polygon: false,
+                circle: false,
+                rectangle: false,
+                marker: true // Aktiverer marker værktøj
             }
         });
 
+        // Aktivér koordinat værktøj
         document.getElementById('coordinateBtn').onclick = function() {
+            map.addControl(coordinateControl);
             document.getElementById('coordinateBtn').style.display = 'none';
-            document.getElementById('stopCoordinateBtn').style.display = 'inline';
+            document.getElementById('stopCoordinateBtn').style.display = 'block';
         };
 
+        // Stop koordinat værktøj
         document.getElementById('stopCoordinateBtn').onclick = function() {
-            document.getElementById('coordinateBtn').style.display = 'inline';
+            map.removeControl(coordinateControl);
+            document.getElementById('coordinateBtn').style.display = 'block';
             document.getElementById('stopCoordinateBtn').style.display = 'none';
         };
 
-        // Håndter tegningsfunktionalitet
-        map.on(L.Draw.Event.CREATED, function(e) {
-            var layer = e.layer;
-            drawnItems.addLayer(layer);
+        // Ved tegning af en markør
+        map.on(L.Draw.Event.CREATED, function(event) {
+            var layer = event.layer;
+            coordinatesDrawnItems.addLayer(layer);
+
+            // Få koordinaterne
+            var coords = layer.getLatLng();
+            alert('Koordinater: ' + coords.lat + ', ' + coords.lng);
         });
     </script>
 </body>

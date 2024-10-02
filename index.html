@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaflet Kort med Flere Funktioner</title>
+    <title>Leaflet Kort med Excel Integration</title>
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+    
+    <!-- XLSX.js for reading Excel files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 
     <style>
         body {
@@ -36,13 +39,67 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             z-index: 1000;
         }
+        .popup-content {
+            max-width: 400px; /* Maksimal bredde af popuppen */
+            overflow: auto; /* Tillad scrolling, hvis indholdet er for stort */
+        }
+        .excel-table {
+            max-height: 300px; /* Sætter maksimal højde på Excel-tabellen */
+            overflow-y: auto; /* Tillader lodret scrolling */
+            margin-top: 10px; /* Margin for lidt afstand fra billedet */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        /* Fuldskærm stil til Excel */
+        .fullscreen-excel {
+            display: none; /* Skjult som standard */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9); /* Mørk baggrund */
+            color: white;
+            z-index: 1001; /* Højere end kortet */
+            overflow: auto;
+            padding: 20px;
+        }
+        .fullscreen-excel table {
+            color: black; /* Sort tekst i tabellen */
+            background: white; /* Hvid baggrund for tabellen */
+        }
+        /* Stil til koordinatværktøjet */
+        .coordinate-tool {
+            background: white;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            position: absolute;
+            top: 10px; /* Placerer værktøjet lidt ned fra toppen */
+            left: 10px; /* Placerer værktøjet lidt ind fra venstre */
+            z-index: 1000; /* Sørger for at værktøjet er ovenfor kortet */
+        }
     </style>
 </head>
 <body>
     <h1>Sanct Croix Anno 1799</h1>
     <div id="map"></div>
     <div id="footer">Lavet af Erik Luis Lanuza Oehlerich</div>
-
+    
     <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
@@ -103,10 +160,10 @@
         osm.addTo(map);
         customTiles.addTo(map);
 
-        // Markør med billede og CSV fil link
+        // Markør med billede og Excel fil link
         var coordinates = [17.7078539, -64.7131291]; // Indsæt dine koordinater her
-        var image = 'https://raw.githubusercontent.com/erikoehlerich/Sankt-croix-Anno-1799/point39/39.jpg'; // Indsæt URL til dit billede her
-        var csvLink = 'https://raw.githubusercontent.com/erikoehlerich/Sankt-croix-Anno-1799/point39/2_table_39.csv'; // Indsæt URL til din CSV-fil her
+        var image = 'Point39/39.jpg'; // Korrekt sti til billede
+        var excelLink = 'Point39/2_table_39.xlsx'; // Korrekt sti til Excel-fil
 
         // Opret en markør
         var marker = L.circleMarker(coordinates, {
@@ -116,53 +173,150 @@
             opacity: 1,
             fillOpacity: 0.8
         }).bindPopup(`
-            <strong>Navn: Sted 1</strong><br>
-            <img src="${image}" alt="Billede" style="width:200px;height:auto;"><br>
-            <a href="${csvLink}" target="_blank">Åbn CSV fil</a>
-        `).addTo(map); // Tilføj markøren til kortet
+            <div class="popup-content">
+                <strong>Navn: Diamond Sted nr. 31 Company quarter</strong><br>
+                <img src="${image}" alt="Billede" style="width:200px;height:auto;"><br>
+                <button onclick="openFullscreen('${image}')">Vis i Fuldskærm</button><br>
+                <button onclick="readExcel('${excelLink}')">Læs Excel fil</button>
+                <button onclick="showExcelFullscreen()">Vis Excel i Fuldskærm</button>
+                <div class="excel-table" id="excelContent"></div> <!-- Placeholder for Excel content -->
+            </div>
+        `, { className: 'popup-large' }).addTo(map); // Tilføj markøren til kortet
 
-        // Yderligere markører kan tilføjes her, hvis nødvendigt
-        // Eksempel på en anden markør
-        var anotherCoordinates = [17.745, -64.745]; // Indsæt koordinater for en anden markør
-        var anotherMarker = L.circleMarker(anotherCoordinates, {
-            radius: 8,
-            color: '#0077cc',
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.8
-        }).bindPopup("En anden markør.").addTo(map); // Tilføj den anden markør til kortet
+        // Funktion til at åbne billedet i fuldskærm
+        function openFullscreen(imgSrc) {
+            const img = document.createElement('img');
+            img.src = imgSrc;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain'; // Beholder billedets proportioner
+            img.style.position = 'fixed';
+            img.style.top = '0';
+            img.style.left = '0';
+            img.style.zIndex = '1000';
+            img.style.backgroundColor = 'rgba(0, 0, 0, 0.9)'; // Mørk baggrund
+            img.style.cursor = 'pointer';
 
-        // Måleværktøj
-        var drawnItems = new L.FeatureGroup();
-        map.addLayer(drawnItems);
+            img.onclick = function() {
+                document.body.removeChild(img); // Lukker billedet ved klik
+            };
+            document.body.appendChild(img); // Tilføj billedet til body
+        }
+
+        // Funktion til at læse Excel fil
+        function readExcel(file) {
+            const url = file;
+            fetch(url)
+                .then(response => response.arrayBuffer())
+                .then(data => {
+                    const workbook = XLSX.read(data); // Læs Excel fil
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet); // Konverter til JSON
+                    displayExcelData(jsonData); // Vis data i popup
+                })
+                .catch(error => {
+                    console.error('Fejl ved indlæsning af Excel fil:', error);
+                });
+        }
+
+        // Funktion til at vise Excel-data i popup
+        function displayExcelData(data) {
+            let table = '<table><tr>';
+            // Opret overskrifter baseret på objektets keys
+            for (let key in data[0]) {
+                table += `<th>${key}</th>`;
+            }
+            table += '</tr>';
+
+            // Fyld tabellen med data
+            data.forEach(row => {
+                table += '<tr>';
+                for (let key in row) {
+                    table += `<td>${row[key]}</td>`;
+                }
+                table += '</tr>';
+            });
+
+            table += '</table>';
+            document.getElementById('excelContent').innerHTML = table;
+        }
+
+        // Fuldskærms Excel-visning
+        function showExcelFullscreen() {
+            var excelContent = document.getElementById('excelContent').innerHTML;
+            var fullscreenDiv = document.createElement('div');
+            fullscreenDiv.className = 'fullscreen-excel';
+            fullscreenDiv.innerHTML = `
+                <div class="fullscreen-excel-content">
+                    ${excelContent}
+                    <button onclick="closeFullscreenExcel()">Luk Fuldskærm</button>
+                </div>
+            `;
+            document.body.appendChild(fullscreenDiv);
+            fullscreenDiv.style.display = 'block'; // Vis elementet
+        }
+
+        function closeFullscreenExcel() {
+            var fullscreenDiv = document.querySelector('.fullscreen-excel');
+            fullscreenDiv.remove(); // Fjern fuldskærms Excel
+        }
+
+        // Interaktivt koordinatværktøj
+        let isCoordToolActive = false;
+
+        // Opret en brugerdefineret kontrol til at aktivere/deaktivere koordinatværktøjet
+        var coordTool = L.control({ position: 'topleft' });
+        coordTool.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'coordinate-tool');
+            div.innerHTML = '<button id="coordToolButton">Aktiver Koordinatværktøj</button>'; // Knappen til at aktivere værktøjet
+            div.onclick = function () {
+                isCoordToolActive = !isCoordToolActive; // Skift tilstand
+                div.querySelector('#coordToolButton').innerText = isCoordToolActive ? 'Deaktiver Koordinatværktøj' : 'Aktiver Koordinatværktøj';
+            };
+            return div;
+        };
+        coordTool.addTo(map);
+
+        // Når brugeren klikker på kortet
+        map.on('click', function (e) {
+            if (isCoordToolActive) {
+                var lat = e.latlng.lat.toFixed(6);
+                var lng = e.latlng.lng.toFixed(6);
+                alert(`Koordinater: ${lat}, ${lng}`); // Viser koordinaterne i en alert
+            }
+        });
+
+        // Funktion til at måle afstande
+        var drawnItems = new L.FeatureGroup().addTo(map);
         var drawControl = new L.Control.Draw({
             edit: {
                 featureGroup: drawnItems
             },
             draw: {
-                polygon: false,
                 polyline: true,
-                rectangle: false,
+                polygon: false,
                 circle: false,
+                rectangle: false,
                 marker: false
             }
         });
+
         map.addControl(drawControl);
 
-        // Når en polyline tegnes, tilføj den til drawnItems
-        map.on(L.Draw.Event.CREATED, function (event) {
+        // Når en polyline tegnes, vis afstand
+        map.on(L.Draw.Event.CREATED, function(event) {
             var layer = event.layer;
             drawnItems.addLayer(layer);
-        });
+            var latLngs = layer.getLatLngs();
+            var distance = 0;
 
-        // Funktion til at vise koordinater når 0 trykkes
-        document.addEventListener('keydown', function(event) {
-            if (event.key === '0') {
-                var mouseCoordinates = map.mouseEventToLatLng(event); // Hent musens koordinater
-                alert('Koordinater: ' + mouseCoordinates.lat.toFixed(6) + ', ' + mouseCoordinates.lng.toFixed(6));
+            for (var i = 0; i < latLngs.length - 1; i++) {
+                distance += latLngs[i].distanceTo(latLngs[i + 1]); // Beregn afstand mellem punkter
             }
-        });
 
+            alert("Total afstand: " + (distance / 1000).toFixed(2) + " km"); // Vis afstand i km
+        });
     </script>
 </body>
 </html>

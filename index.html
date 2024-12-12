@@ -64,7 +64,7 @@
         /* Værktøjsboks stil */
         .tools-container {
             position: fixed; /* Flyt værktøjsboksen til fixed position */
-            bottom: 200px; /* Placering til venstre */
+            bottom: 200x; /* Placering til venstre */
             left: 50%; /* Placering til venstre */
             background-color: white;
             padding: 10px;
@@ -133,6 +133,12 @@
             maxZoom: 20
         });
 
+        // Definer dine tile layers som overlay
+        var customTiles = L.tileLayer('https://storage.googleapis.com/sanct_croix1799/{z}/{x}/{y}.png', {
+            attribution: '© Google Cloud',
+            maxZoom: 19
+        });
+
         // Tilføj baggrundskort som basislag
         var baseLayers = {
             "OpenStreetMap": osm,
@@ -141,74 +147,204 @@
             "Mapbox Streets": mapbox
         };
 
+        // Tilføj custom tiles som overlay og slå det til som standard
+        var overlays = {
+            "Custom Tiles": customTiles
+        };
+
+        // Tilføj baseLayers og overlays til kortet
+        L.control.layers(baseLayers, overlays).addTo(map);
+
         // Tilføj OSM som standard baggrundskort
         osm.addTo(map);
+        customTiles.addTo(map);
+
 
         // Array af punkter
-        var points = [
-            {
-                coordinates: [17.750487, -64.721364],
-                navn: "Matrikel nr. 4, Golden Rock ",
-                nabolag: "Company Quarter",
-                ejer: "James Forbes",
-                image: 'Matrikel for Kompagniets kvarter/Point4/9.jpg',
-                excelLink: 'Matrikel for Kompagniets kvarter/Point4/point4_9_2.xlsx'
-            },
-            {
-                coordinates: [17.738825, -64.722948],
-                navn: "Matrikel nr. 6, Beeston hil/Bidsted hill",
-                nabolag: "Company Quarter",
-                ejer: "George Park",
-                image: 'Matrikel for Kompagniets kvarter/Point6/7.jpg',
-                excelLink: 'Matrikel for Kompagniets kvarter/Point6/point6_7_2.xlsx'
-            },
-            {
-                coordinates: [17.735187, -64.773395],
-                navn: "Matrikel nr. 20, La Reine",
-                nabolag: "Kings Quarter",
-                ejer: "John Ryan Esquire",
-                image: [
-                    'Matrikel for Kongens kvarter/Point20/172.jpg',
-                    'Matrikel for Kongens kvarter/Point20/175.jpg'
-                ],
-                excelLink: [
-                    'Matrikel for Kongens kvarter/Point20/Point20_172_2.xlsx',
-                    'Matrikel for Kongens kvarter/Point20/Point20_175_2.xlsx'
-                ]
-            }
-        ];
 
-        // Iterér gennem punkterne og tilføj dem til kortet
-        points.forEach(function(point) {
-            var marker = L.circleMarker(point.coordinates, {
-                radius: 8,
-                color: '#ff7800',
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0.8
-            }).bindPopup(`
-                <div class="popup-content">
-                    <strong>Navn: ${point.navn}</strong><br>
-                    <strong>Nabolag: ${point.nabolag}</strong><br>
-                    <strong>Ejer: ${point.ejer}</strong><br>
-                    <div>
-                        <strong>Billeder:</strong><br>
-                        ${Array.isArray(point.image) ? point.image.map(img => 
-                            `<img src="${img}" alt="Billede" style="width:100px;height:auto;">
-                            <button onclick="openFullscreen('${img}')">Vis i Fuldskærm</button><br>`).join('') : 
-                            `<img src="${point.image}" alt="Billede" style="width:100px;height:auto;">
-                            <button onclick="openFullscreen('${point.image}')">Vis i Fuldskærm</button><br>`}
-                    </div>
-                    <div>
-                        <strong>Excel Filer:</strong><br>
-                        ${Array.isArray(point.excelLink) ? point.excelLink.map(file => 
-                            `<button onclick="readExcel('${file}')">Læs Excel fil</button><br>`).join('') : 
-                            `<button onclick="readExcel('${point.excelLink}')">Læs Excel fil</button><br>`}
-                    </div>
-                    <div class="excel-table" id="excelContent"></div>
-                </div>
-            `).addTo(map);
-        });
+        // Dronningens Kvarter
+        // East End A: Kvarter
+        // East End B: Kvarter
+        // Kompagniets Kvarter
+var points = [
+    {
+        coordinates: [17.750487, -64.721364],
+        navn: "Matrikel nr. 4, Golden Rock ",
+        nabolag: "Company Quarter",
+        ejer: "James Forbes",
+        image: 'Matrikel for Kompagniets kvarter/Point4/9.jpg',
+        excelLink: 'Matrikel for Kompagniets kvarter/Point4/point4_9_2.xlsx'
+    },
+    {
+        coordinates: [17.738825, -64.722948],
+        navn: "Matrikel nr. 6, Beeston hil/Bidsted hill",
+        nabolag: "Company Quarter",
+        ejer: "George Park",
+        image: 'Matrikel for Kompagniets kvarter/Point6/7.jpg',
+        excelLink: 'Matrikel for Kompagniets kvarter/Point6/point6_7_2.xlsx'
+    },
+    {
+        coordinates: [17.725249, -64.711715],
+        navn: "Matrikel nr. 12, 14, 20 & 21, Catharianas Reest",
+        nabolag: "Company Quarter",
+        ejer: "Heies of C: De Nully",
+        image: 'Matrikel for Kompagniets kvarter/Point12&14&20&21/21.jpg',
+        excelLink: 'Matrikel for Kompagniets kvarter/Point12&14&20&21/Point12_21_2.xlsx'
+    },
+    {
+        coordinates: [17.712029, -64.722862],
+        navn: "Matrikel nr. 16",
+        nabolag: "Company Quarter",
+        ejer: "Friederich Baron de Bretton",
+        image: 'Matrikel for Kompagniets kvarter/Point16/23.jpg',
+        excelLink: 'Matrikel for Kompagniets kvarter/Point16/point16_23_2.xlsx'
+    },
+    {
+        coordinates: [17.726582, -64.70016],
+        navn: "Matrikel nr. 21",
+        nabolag: "Company Quarter",
+        ejer: "Mary Key",
+        image: 'Matrikel for Kompagniets kvarter/Point21/40.jpg',
+        excelLink: 'Matrikel for Kompagniets kvarter/Point21/Point21_40_2.xlsx'
+    },
+    {
+        coordinates: [17.729893, -64.692371],
+        navn: "Matrikel nr. 23, Spring Garden",
+        nabolag: "Company Quarter",
+        ejer: "Heirs of John & Elizabeth Boakley",
+        image: 'Matrikel for Kompagniets kvarter/Point23/34.jpg',
+        excelLink: 'Matrikel for Kompagniets kvarter/Point23/Point23_34_2.xlsx'
+    },
+    {
+        coordinates: [17.708268, -64.714773],
+        navn: "Matrikel nr. 31, Diamond Estate",
+        nabolag: "Company Quarter",
+        ejer: "Gen C. Lindemann",
+        image: 'Matrikel for Kompagniets kvarter/Point31/39.jpg',
+        excelLink: 'Matrikel for Kompagniets kvarter/Point31/Point31_39_2.xlsx'
+    },
+    {
+        coordinates: [17.745058, -64.732518],
+        navn: "Matrikel nr. 35, Bellevue Estate",
+        nabolag: "Company Quarter",
+        ejer: "Mrs. Anna Linberg",
+        image: 'Matrikel for Kompagniets kvarter/Point35_43_2/43.jpg',
+        excelLink: 'Matrikel for Kompagniets kvarter/Point35_43_2/Point35_43_2.xlsx'
+    },
+      // Kongens Kvarter
+      {
+    coordinates: [17.735187, -64.773395],
+    navn: "Matrikel nr. 20, La Reine",
+    nabolag: "Kings Quarter",
+    ejer: "John Ryan Esquire",
+    image: [
+        'Matrikel for Kongens kvarter/Point20/172.jpg',
+        'Matrikel for Kongens kvarter/Point20/175.jpg'
+    ],
+    excelLink: [
+        'Matrikel for Kongens kvarter/Point20/Point20_172_2.xlsx',
+        'Matrikel for Kongens kvarter/Point20/Point20_175_2.xlsx'
+    ]
+},
+    {
+        coordinates: [17.724395, -64.776657],
+        navn: "Matrikel nr. 22, Clifton Hill",
+        nabolag: "Kings Quarter",
+        ejer: "Edward Murphy",
+        image: 'Matrikel for Kongens kvarter/Point22/183.jpg',
+        excelLink: 'Matrikel for Kongens kvarter/Point22/Point22_183_2.xlsx'
+    },
+    {
+        coordinates: [17.718549, -64.779553],
+        navn: "Matrikel nr. 28",
+        nabolag: "Kings Quarter",
+        ejer: "Ejeren 3",
+        image: 'Point3/3.jpg',
+        excelLink: 'Point3/table_3.xlsx'
+    },
+    {
+        coordinates: [17.760000, -64.740000],
+        navn: "Matrikel nr. 29",
+        nabolag: "Kings Quarter",
+        ejer: "Ejeren 3",
+        image: 'Point3/3.jpg',
+        excelLink: 'Point3/table_3.xlsx'
+    },
+    {
+        coordinates: [17.760000, -64.740000],
+        navn: "Matrikel nr. 30 & 31",
+        nabolag: "Kings Quarter",
+        ejer: "Ejeren 3",
+        image: 'Point3/3.jpg',
+        excelLink: 'Point3/table_3.xlsx'
+    },
+    {
+        coordinates: [17.760000, -64.740000],
+        navn: "Matrikel nr. 32",
+        nabolag: "Kings Quarter",
+        ejer: "Ejeren 3",
+        image: 'Point3/3.jpg',
+        excelLink: 'Point3/table_3.xlsx'
+    },
+    {
+        coordinates: [17.760000, -64.740000],
+        navn: "Matrikel nr. 32 & 33",
+        nabolag: "Kings Quarter",
+        ejer: "Ejeren 3",
+        image: 'Point3/3.jpg',
+        excelLink: 'Point3/table_3.xlsx'
+    },
+    {
+        coordinates: [17.760000, -64.740000],
+        navn: "Matrikel nr. 33 A",
+        nabolag: "Kings Quarter",
+        ejer: "Ejeren 3",
+        image: 'Point3/3.jpg',
+        excelLink: 'Point3/table_3.xlsx'
+    },
+    // Northside A Kvarter
+    {
+        coordinates: [17.760000, -64.740000],
+        navn: "Sted nr. 3",
+        nabolag: "East Side",
+        ejer: "Ejeren 3",
+        image: 'Point3/3.jpg',
+        excelLink: 'Point3/table_3.xlsx'
+    },
+     // Northside B Kvarter
+     // West End Kvarter
+     {
+        coordinates: [17.760000, -64.740000],
+        navn: "Sted nr. 3",
+        nabolag: "East Side",
+        ejer: "Ejeren 3",
+        image: 'Point3/3.jpg',
+        excelLink: 'Point3/table_3.xlsx'
+    },
+
+];
+
+// Iterér gennem punkterne og tilføj dem til kortet
+points.forEach(function(point) {
+    var marker = L.circleMarker(point.coordinates, {
+        radius: 8,
+        color: '#ff7800',
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+    }).bindPopup(`
+        <div class="popup-content">
+            <strong>Navn: ${point.navn}</strong><br>
+            <strong>Nabolag: ${point.nabolag}</strong><br>
+            <strong>Ejer: ${point.ejer}</strong><br>
+            <img src="${point.image}" alt="Billede" style="width:200px;height:auto;"><br>
+            <button onclick="openFullscreen('${point.image}')">Vis i Fuldskærm</button><br>
+            <button onclick="readExcel('${point.excelLink}')">Læs Excel fil</button>
+            <button onclick="showExcelFullscreen()">Vis Excel i Fuldskærm</button>
+            <div class="excel-table" id="excelContent"></div>
+        </div>
+    `, { className: 'popup-large' }).addTo(map);
+});
 
         // Funktion til at åbne billedet i fuldskærm
         function openFullscreen(imgSrc) {
@@ -222,12 +358,12 @@
             img.style.left = '0';
             img.style.zIndex = '10000'; // Sørg for, at billedet er oven på alt andet
             img.onclick = function() {
-                document.body.removeChild(img); // Luk fuldskærm ved at klikke på billedet
+                document.body.removeChild(img); // Luk fuldskærm ved at klikke
             };
-            document.body.appendChild(img);
+            document.body.appendChild(img); // Tilføj billedet til body
         }
 
-        // Funktion til at læse Excel-filer
+        // Funktion til at læse Excel-filen og vise indholdet
         function readExcel(file) {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', file, true);
@@ -247,37 +383,76 @@
             xhr.send();
         }
 
-        // Måleværktøj
-        var measureControl = new L.Control.Measure({
-            position: 'topleft',
-            primaryLengthUnit: 'meters',
-            secondaryLengthUnit: 'kilometers',
-            primaryAreaUnit: 'sqmeters',
-            secondaryAreaUnit: 'sqkilometers',
-        }).addTo(map);
+        // Funktion til at vise Excel i fuldskærm
+        function showExcelFullscreen() {
+            const excelContent = document.getElementById('excelContent');
+            const fullScreenDiv = document.createElement('div');
+            fullScreenDiv.style.position = 'fixed';
+            fullScreenDiv.style.top = '0';
+            fullScreenDiv.style.left = '0';
+            fullScreenDiv.style.width = '100%';
+            fullScreenDiv.style.height = '100%';
+            fullScreenDiv.style.backgroundColor = 'white';
+            fullScreenDiv.style.zIndex = '10000';
+            fullScreenDiv.style.overflow = 'auto';
+            fullScreenDiv.innerHTML = `<h2>Excel Indhold</h2>${excelContent.innerHTML}`;
+            fullScreenDiv.onclick = function() {
+                document.body.removeChild(fullScreenDiv); // Luk fuldskærm ved at klikke
+            };
+            document.body.appendChild(fullScreenDiv); // Tilføj fuldskærm div til body
+        }
 
-        // Koordinatværktøj
+        // Aktiver måleværktøj
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
-
         var drawControl = new L.Control.Draw({
-            draw: {
-                polygon: false,
-                polyline: false,
-                rectangle: false,
-                circle: false,
-                marker: true
-            },
             edit: {
                 featureGroup: drawnItems
+            },
+            draw: {
+                polygon: true,
+                polyline: true,
+                rectangle: true,
+                circle: true,
+                marker: true,
+                circlemarker: false
             }
-        }).addTo(map);
+        });
 
-        map.on('draw:created', function(e) {
+        document.getElementById('measureBtn').onclick = function() {
+            map.addControl(drawControl);
+            document.getElementById('measureBtn').style.display = 'none';
+            document.getElementById('stopMeasureBtn').style.display = 'inline';
+        };
+
+        document.getElementById('stopMeasureBtn').onclick = function() {
+            map.removeControl(drawControl);
+            document.getElementById('measureBtn').style.display = 'inline';
+            document.getElementById('stopMeasureBtn').style.display = 'none';
+        };
+
+        // Aktiver koordinatvælger
+        map.on('click', function(e) {
+            if (document.getElementById('coordinateBtn').style.display === 'none') {
+                alert("Koordinater: " + e.latlng.toString());
+            }
+        });
+
+        document.getElementById('coordinateBtn').onclick = function() {
+            document.getElementById('coordinateBtn').style.display = 'none';
+            document.getElementById('stopCoordinateBtn').style.display = 'inline';
+        };
+
+        document.getElementById('stopCoordinateBtn').onclick = function() {
+            document.getElementById('coordinateBtn').style.display = 'inline';
+            document.getElementById('stopCoordinateBtn').style.display = 'none';
+        };
+
+        // Håndter tegningsfunktionalitet
+        map.on(L.Draw.Event.CREATED, function(e) {
             var layer = e.layer;
             drawnItems.addLayer(layer);
         });
-
     </script>
 </body>
 </html>

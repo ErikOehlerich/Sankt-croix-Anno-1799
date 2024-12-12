@@ -79,7 +79,18 @@
             left: 55%; /* Skift til højre for koordinatværktøjet */
             margin-bottom: 70px; /* Øg margin til at forhindre overlap med footer */
         }
+        
+        
+  /* Begræns billedets størrelse i popuppen */
+  .popup-content img {
+    max-width: 100px; /* Begræns bredden */
+    height: auto;     /* Bevar proportionerne */
+    display: block;   /* Forhindrer inline layout-forstyrrelser */
+    margin: 5px 0;    /* Tilføj lidt afstand omkring billederne */
+  }
     </style>
+
+
 </head>
 <body>
     <h1>Sanct Croix Anno 1799</h1>
@@ -357,6 +368,9 @@ var points = [
                 </div>
             `).addTo(map);
         });
+
+
+
 
         // Funktion til at åbne billedet i fuldskærm
         function openFullscreen(imgSrc) {

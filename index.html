@@ -95,7 +95,7 @@
 <body>
     <h1>Sanct Croix Anno 1799</h1>
     <div id="map"></div>
-    <div id="footer">Lavet af Erik Luis Lanuza Oehlerich</div>
+    <div id="footer">Udarbejdet af Erik Luis Lanuza Oehlerich</div>
     
     <!-- Værktøjer -->
     <div class="tools-container measure">
@@ -269,26 +269,44 @@ var points = [
         coordinates: [17.718549, -64.779553],
         navn: "Matrikel nr. 28",
         nabolag: "Kings Quarter",
-        ejer: "Ejeren 3",
-        image: 'Point3/3.jpg',
-        excelLink: 'Point3/table_3.xlsx'
-    },
-    {
-        coordinates: [17.760000, -64.740000],
+        ejer: "John G. Krause",
+        image: [
+                    'Matrikel for Kongens kvarter/Point28/188.jpg',
+                    'Matrikel for Kongens kvarter/Point28/189.jpg'
+                ],
+                excelLink: [
+                    'Matrikel for Kongens kvarter/Point28/Point28_188_2.xlsx',
+                    'Matrikel for Kongens kvarter/Point28/Point28_188_2.xlsx'
+                ]
+            },
+            {
+        coordinates: [17.715545, -64.774039],
         navn: "Matrikel nr. 29",
         nabolag: "Kings Quarter",
-        ejer: "Ejeren 3",
-        image: 'Point3/3.jpg',
-        excelLink: 'Point3/table_3.xlsx'
-    },
-    {
-        coordinates: [17.760000, -64.740000],
-        navn: "Matrikel nr. 30 & 31",
+        ejer: "Abrame Markoe Senior",
+        image: [
+                    'Matrikel for Kongens kvarter/Point29/190.jpg',
+                    'Matrikel for Kongens kvarter/Point29/191.jpg'
+                ],
+                excelLink: [
+                    'Matrikel for Kongens kvarter/Point28/Point28_190_2.xlsx',
+                    'Matrikel for Kongens kvarter/Point28/Point28_191_2.xlsx'
+                ]
+            },
+            {
+        coordinates: [17.713705, -64.765391],
+        navn: "Matrikel nr. 30 & 31, the estate Blessing",
         nabolag: "Kings Quarter",
-        ejer: "Ejeren 3",
-        image: 'Point3/3.jpg',
-        excelLink: 'Point3/table_3.xlsx'
-    },
+        ejer: "Joe Johnson",
+        image: [
+                    'Matrikel for Kongens kvarter/Point30&31_192_2/192.jpg',
+                    'Matrikel for Kongens kvarter/Point30&31_192_2/196.jpg'
+                ],
+                excelLink: [
+                    'Matrikel for Kongens kvarter/Point30&31_192_2/Point_30&31_192_2.xlsx',
+                    'Matrikel for Kongens kvarter/Point30&31_192_2/Point_30&31_196_2.xlsx'
+                ]
+            },
     {
         coordinates: [17.760000, -64.740000],
         navn: "Matrikel nr. 32",
@@ -368,8 +386,6 @@ var points = [
                 </div>
             `).addTo(map);
         });
-
-
 
 
         // Funktion til at åbne billedet i fuldskærm

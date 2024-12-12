@@ -64,7 +64,7 @@
         /* Værktøjsboks stil */
         .tools-container {
             position: fixed; /* Flyt værktøjsboksen til fixed position */
-            bottom: 200x; /* Placering til venstre */
+            bottom: 200px; /* Placering til venstre */
             left: 50%; /* Placering til venstre */
             background-color: white;
             padding: 10px;
@@ -246,6 +246,38 @@
 
             xhr.send();
         }
+
+        // Måleværktøj
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'sqkilometers',
+        }).addTo(map);
+
+        // Koordinatværktøj
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        var drawControl = new L.Control.Draw({
+            draw: {
+                polygon: false,
+                polyline: false,
+                rectangle: false,
+                circle: false,
+                marker: true
+            },
+            edit: {
+                featureGroup: drawnItems
+            }
+        }).addTo(map);
+
+        map.on('draw:created', function(e) {
+            var layer = e.layer;
+            drawnItems.addLayer(layer);
+        });
+
     </script>
 </body>
 </html>

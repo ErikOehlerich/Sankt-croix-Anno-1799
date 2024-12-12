@@ -233,19 +233,19 @@ var points = [
     },
       // Kongens Kvarter
       {
-    coordinates: [17.735187, -64.773395],
-    navn: "Matrikel nr. 20, La Reine",
-    nabolag: "Kings Quarter",
-    ejer: "John Ryan Esquire",
-    image: [
-        'Matrikel for Kongens kvarter/Point20/172.jpg',
-        'Matrikel for Kongens kvarter/Point20/175.jpg'
-    ],
-    excelLink: [
-        'Matrikel for Kongens kvarter/Point20/Point20_172_2.xlsx',
-        'Matrikel for Kongens kvarter/Point20/Point20_175_2.xlsx'
-    ]
-},
+                coordinates: [17.735187, -64.773395],
+                navn: "Matrikel nr. 20, La Reine",
+                nabolag: "Kings Quarter",
+                ejer: "John Ryan Esquire",
+                image: [
+                    'Matrikel for Kongens kvarter/Point20/172.jpg',
+                    'Matrikel for Kongens kvarter/Point20/175.jpg'
+                ],
+                excelLink: [
+                    'Matrikel for Kongens kvarter/Point20/Point20_172_2.xlsx',
+                    'Matrikel for Kongens kvarter/Point20/Point20_175_2.xlsx'
+                ]
+            },
     {
         coordinates: [17.724395, -64.776657],
         navn: "Matrikel nr. 22, Clifton Hill",
@@ -326,25 +326,36 @@ var points = [
 
 // Iterér gennem punkterne og tilføj dem til kortet
 points.forEach(function(point) {
-    var marker = L.circleMarker(point.coordinates, {
-        radius: 8,
-        color: '#ff7800',
-        weight: 1,
-        opacity: 1,
-        fillOpacity: 0.8
-    }).bindPopup(`
-        <div class="popup-content">
-            <strong>Navn: ${point.navn}</strong><br>
-            <strong>Nabolag: ${point.nabolag}</strong><br>
-            <strong>Ejer: ${point.ejer}</strong><br>
-            <img src="${point.image}" alt="Billede" style="width:200px;height:auto;"><br>
-            <button onclick="openFullscreen('${point.image}')">Vis i Fuldskærm</button><br>
-            <button onclick="readExcel('${point.excelLink}')">Læs Excel fil</button>
-            <button onclick="showExcelFullscreen()">Vis Excel i Fuldskærm</button>
-            <div class="excel-table" id="excelContent"></div>
-        </div>
-    `, { className: 'popup-large' }).addTo(map);
-});
+            var marker = L.circleMarker(point.coordinates, {
+                radius: 8,
+                color: '#ff7800',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).bindPopup(`
+                <div class="popup-content">
+                    <strong>Navn: ${point.navn}</strong><br>
+                    <strong>Nabolag: ${point.nabolag}</strong><br>
+                    <strong>Ejer: ${point.ejer}</strong><br>
+                    <div>
+                        <strong>Billeder:</strong><br>
+                        ${Array.isArray(point.image) ? point.image.map(img => 
+                            `<img src="${img}" alt="Billede" style="width:100px;height:auto;">
+                            <button onclick="openFullscreen('${img}')">Vis i Fuldskærm</button><br>`).join('') : 
+                            `<img src="${point.image}" alt="Billede" style="width:100px;height:auto;">
+                            <button onclick="openFullscreen('${point.image}')">Vis i Fuldskærm</button><br>`}
+                    </div>
+                    <div>
+                        <strong>Excel Filer:</strong><br>
+                        ${Array.isArray(point.excelLink) ? point.excelLink.map(file => 
+                            `<button onclick="readExcel('${file}')">Læs Excel fil</button><br>`).join('') : 
+                            `<button onclick="readExcel('${point.excelLink}')">Læs Excel fil</button><br>`}
+                    </div>
+                    <div class="excel-table" id="excelContent"></div>
+                </div>
+            `).addTo(map);
+        });
+
 
         // Funktion til at åbne billedet i fuldskærm
         function openFullscreen(imgSrc) {

@@ -324,9 +324,9 @@ var points = [
 
 ];
 
-// Iterér gennem punkterne og tilføj dem til kortet
-points.forEach(function(point) {
-            var marker = L.circleMarker(point.coordinates, {
+  // Iterér gennem punkterne og tilføj dem til kortet
+  points.forEach(function(point) {
+            const marker = L.circleMarker(point.coordinates, {
                 radius: 8,
                 color: '#ff7800',
                 weight: 1,
@@ -340,22 +340,23 @@ points.forEach(function(point) {
                     <div>
                         <strong>Billeder:</strong><br>
                         ${Array.isArray(point.image) ? point.image.map(img => 
-                            `<img src="${img}" alt="Billede" style="width:100px;height:auto;">
+                            `<img src="${img}" alt="Billede">
                             <button onclick="openFullscreen('${img}')">Vis i Fuldskærm</button><br>`).join('') : 
-                            `<img src="${point.image}" alt="Billede" style="width:100px;height:auto;">
+                            `<img src="${point.image}" alt="Billede">
                             <button onclick="openFullscreen('${point.image}')">Vis i Fuldskærm</button><br>`}
                     </div>
                     <div>
                         <strong>Excel Filer:</strong><br>
                         ${Array.isArray(point.excelLink) ? point.excelLink.map(file => 
-                            `<button onclick="readExcel('${file}')">Læs Excel fil</button><br>`).join('') : 
-                            `<button onclick="readExcel('${point.excelLink}')">Læs Excel fil</button><br>`}
+                            `<button onclick="readExcel('${file}')">Læs Excel fil</button>
+                            <button onclick="showExcelFullscreen()">Vis i Fuldskærm</button><br>`).join('') : 
+                            `<button onclick="readExcel('${point.excelLink}')">Læs Excel fil</button>
+                            <button onclick="showExcelFullscreen()">Vis i Fuldskærm</button><br>`}
                     </div>
                     <div class="excel-table" id="excelContent"></div>
                 </div>
             `).addTo(map);
         });
-
 
         // Funktion til at åbne billedet i fuldskærm
         function openFullscreen(imgSrc) {
@@ -376,18 +377,18 @@ points.forEach(function(point) {
 
         // Funktion til at læse Excel-filen og vise indholdet
         function readExcel(file) {
-            var xhr = new XMLHttpRequest();
+            const xhr = new XMLHttpRequest();
             xhr.open('GET', file, true);
             xhr.responseType = 'arraybuffer';
 
             xhr.onload = function(e) {
-                var data = new Uint8Array(xhr.response);
-                var workbook = XLSX.read(data, { type: 'array' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
+                const data = new Uint8Array(xhr.response);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
 
                 // Generer HTML fra Excel-data
-                var html = XLSX.utils.sheet_to_html(worksheet, { header: 1 });
+                const html = XLSX.utils.sheet_to_html(worksheet, { header: 1 });
                 document.getElementById('excelContent').innerHTML = html;
             };
 
@@ -397,20 +398,24 @@ points.forEach(function(point) {
         // Funktion til at vise Excel i fuldskærm
         function showExcelFullscreen() {
             const excelContent = document.getElementById('excelContent');
-            const fullScreenDiv = document.createElement('div');
-            fullScreenDiv.style.position = 'fixed';
-            fullScreenDiv.style.top = '0';
-            fullScreenDiv.style.left = '0';
-            fullScreenDiv.style.width = '100%';
-            fullScreenDiv.style.height = '100%';
-            fullScreenDiv.style.backgroundColor = 'white';
-            fullScreenDiv.style.zIndex = '10000';
-            fullScreenDiv.style.overflow = 'auto';
-            fullScreenDiv.innerHTML = `<h2>Excel Indhold</h2>${excelContent.innerHTML}`;
-            fullScreenDiv.onclick = function() {
-                document.body.removeChild(fullScreenDiv); // Luk fuldskærm ved at klikke
-            };
-            document.body.appendChild(fullScreenDiv); // Tilføj fuldskærm div til body
+            if (excelContent && excelContent.innerHTML.trim() !== "") {
+                const fullScreenDiv = document.createElement('div');
+                fullScreenDiv.style.position = 'fixed';
+                fullScreenDiv.style.top = '0';
+                fullScreenDiv.style.left = '0';
+                fullScreenDiv.style.width = '100%';
+                fullScreenDiv.style.height = '100%';
+                fullScreenDiv.style.backgroundColor = 'white';
+                fullScreenDiv.style.zIndex = '10000';
+                fullScreenDiv.style.overflow = 'auto';
+                fullScreenDiv.innerHTML = `<h2>Excel Indhold</h2>${excelContent.innerHTML}`;
+                fullScreenDiv.onclick = function() {
+                    document.body.removeChild(fullScreenDiv); // Luk fuldskærm ved at klikke
+                };
+                document.body.appendChild(fullScreenDiv); // Tilføj fuldskærm div til body
+            } else {
+                alert("Indlæs Excel-filen først for at vise den i fuldskærm!");
+            }
         }
 
         // Aktiver måleværktøj

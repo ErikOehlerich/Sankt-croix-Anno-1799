@@ -170,6 +170,13 @@
         osm.addTo(map);
         customTiles.addTo(map);
 
+       // Opret en marker cluster gruppe
+        var markers = L.markerClusterGroup({
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true
+        });
+
 
         // Array af punkter
 

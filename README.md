@@ -16,6 +16,7 @@ https://erikoehlerich.github.io/Sankt-croix-Anno-1799/
 
 Link to the national archive
 https://arkivalieronline.rigsarkivet.dk/da/billedviser?epid=17241563#209920,39586192 
-Link to the map over Sankt Croix from the Royal library>
+
+Link to the map over Sankt Croix from the Royal Danish Library>
 http://www5.kb.dk/maps/kortsa/2012/jul/kortatlas/object65447/da/ 
 

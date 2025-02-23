@@ -9,6 +9,8 @@ The map of Sanct Croix is from the royal libraries collection and is public doma
 Link to my map project.
 https://erikoehlerich.github.io/Sankt-croix-Anno-1799/
 
+og til tiles 
+https://github.com/ErikOehlerich/Map-of-Sanct-Croix-tiles 
 
 Link to the national archive
 https://arkivalieronline.rigsarkivet.dk/da/billedviser?epid=17241563#209920,39586192 

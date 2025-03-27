@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kort over plantager på Sankt Croix i 1799</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+    
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+
+
+    <!-- XLSX.js for reading Excel files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            height: 600px;  /* Kortets højde */
+            width: 100%;  /* Kortets bredde */
+            position: relative;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #footer {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background-color: #fff;
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .popup-content {
+            max-width: 400px; /* Maksimal bredde af popuppen */
+            overflow: auto; /* Tillad scrolling, hvis indholdet er for stort */
+        }
+        .excel-table {
+            max-height: 300px; /* Sætter maksimal højde på Excel-tabellen */
+            overflow-y: auto; /* Tillader lodret scrolling */
+            margin-top: 10px; /* Margin for lidt afstand fra billedet */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        /* Værktøjsboks stil */
+        .tools-container {
+            position: fixed; /* Flyt værktøjsboksen til fixed position */
+            bottom: 1px; /* Placering til venstre */
+            left: 25%; /* Placering til venstre */
+            background-color: white;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000; /* Højere end kortet */
+            margin-bottom: 1px; /* Margin til at forhindre overlap */
+        }
+        .tools-container.measure {
+            left: 40%;
+        }
+        .tools-container.coordinates {
+            left: 55%; /* Skift til højre for koordinatværktøjet */
+            margin-bottom: 1px; /* Øg margin til at forhindre overlap med footer */
+        }
+        
+        /* Begræns billedets størrelse i popuppen */
+        .popup-content img {
+            max-width: 100px; /* Begræns bredden */
+            height: auto;     /* Bevar proportionerne */
+            display: block;   /* Forhindrer inline layout-forstyrrelser */
+            margin: 5px 0;    /* Tilføj lidt afstand omkring billederne */
+        }
+    </style>
+</head>
+<body>
+    <h1>Sankt Croix Anno 1799</h1>
+    <div id="map"></div>
+    <div id="footer">Udarbejdet af Erik Luis Lanuza Oehlerich</div>
+    
+    <!-- Værktøjer -->
+    <div class="tools-container measure">
+        <h3>Måleværktøj</h3>
+        <button id="measureBtn">Aktiver Måleværktøj</button>
+        <button id="stopMeasureBtn" style="display:none;">Deaktiver Måleværktøj</button>
+    </div>
+    
+    <div class="tools-container coordinates">
+        <h3>Koordinat Vælger</h3>
+        <button id="coordinateBtn">Aktiver Koordinat Vælger</button>
+        <button id="stopCoordinateBtn" style="display:none;">Deaktiver Koordinat Vælger</button>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+
+    <!-- Leaflet MarkerCluster JavaScript -->
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // Initialiser kortet
+        var map = L.map('map').setView([17.7421648, -64.7560983], 12); // Centrer kortet
+
+        // Definer baggrundskortene
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        });
+
+        var googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            attribution: '© Google',
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            maxZoom: 20
+        });
+
+        var googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            attribution: '© Google',
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            maxZoom: 20
+        });
+
+        var mapbox = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=your.mapbox.access.token', {
+            attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a>',
+            id: 'mapbox/streets-v11',
+            tileSize: 512,
+            zoomOffset: -1,
+            maxZoom: 20
+        });
+
+        // Definer dine tile layers som overlay
+        var customTiles = L.tileLayer('https://erikoehlerich.github.io/Map-of-Sanct-Croix-tiles/{z}/{x}/{y}.png', {
+            attribution: '© Erik Oehlerich',
+            maxZoom: 19
+        });
+
+        // Tilføj baggrundskort som basislag
+        var baseLayers = {
+            "OpenStreetMap": osm,
+            "Google Satellite": googleSat,
+            "Google Streets": googleStreets,
+            "Mapbox Streets": mapbox
+        };
+
+        // Tilføj custom tiles som overlay og slå det til som standard
+        var overlays = {
+            "Custom Tiles": customTiles
+        };
+
+        // Tilføj baseLayers og overlays til kortet
+        L.control.layers(baseLayers, overlays).addTo(map);
+
+        // Tilføj OSM som standard baggrundskort
+        osm.addTo(map);
+        customTiles.addTo(map);
+
+        // Opret en marker cluster gruppe
+        var markers = L.markerClusterGroup({
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true
+        });
+
+        // Array af punkter
+        var points = [
+            {
+                coordinates: [17.705999, -64.88343],
+                navn: "Matrikel nr. 37, two brothers",
+                nabolag: "West Ende Kvarter",
+                ejer: "Richard Forster",
+                image: ['West_End_distrikt/point37/401.jpg',
+                        'West_End_distrikt/point37/402.jpg'],
+                excelLink: ['West_End_distrikt/point37/point37_401_1.xlsx',
+                            'West_End_distrikt/point37/point37_402_1.xlsx']  
+            },
+            {
+                coordinates: [17.710251, -64.871049],
+                navn: "Matrikel nr. 39 & 38, Wheel of Fortune",
+                nabolag: "West Ende Kvarter",
+                ejer: "George S: Hardieng Esqr",
+                image:'West_End_distrikt/point38/406.jpg',
+                excelLink: 'West_End_distrikt/point38/point38_406_1.xlsx'        
+            },
+            {
+                coordinates: [17.720082, -64.879439],
+                navn: "La Grange",
+                nabolag: "West Ende Kvarter",
+                ejer: "Heirs of Count Schimmelman dead & John o Kellye",
+                image: ['West_End_distrikt/pointgrange/409.jpg',
+                        'West_End_distrikt/pointgrange/410.jpg',
+                        'West_End_distrikt/pointgrange/414.jpg'],
+                excelLink: ['West_End_distrikt/pointgrange/point_la_grange_409_1.xlsx',
+                            'West_End_distrikt/pointgrange/point_la_grange_410_1.xlsx',
+                            'West_End_distrikt/pointgrange/point_la_grange_414_1.xlsx']
+            }
+        ];
+
+        // Iterér gennem punkterne og tilføj dem til kortet
+        points.forEach(function(point) {
+            const marker = L.circleMarker(point.coordinates, {
+                radius: 8,
+                color: '#ff7800',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).bindPopup(`
+                <div class="popup-content">
+                    <strong>Navn: ${point.navn}</strong><br>
+                    <strong>Nabolag: ${point.nabolag}</strong><br>
+                    <strong>Ejer: ${point.ejer}</strong><br>
+                    <div>
+                        <strong>Billeder:</strong><br>
+                        ${Array.isArray(point.image) ? point.image.map(img => 
+                            `<img src="${img}" alt="Billede">
+                            <button onclick="openFullscreen('${img}')">Vis i Fuldskærm</button><br>`).join('') : 
+                            `<img src="${point.image}" alt="Billede">
+                            <button onclick="openFullscreen('${point.image}')">Vis i Fuldskærm</button><br>`}
+                    </div>
+                    <div>
+                        <strong>Excel Filer:</strong><br>
+                        ${Array.isArray(point.excelLink) ? point.excelLink.map(file => 
+                            `<button onclick="readExcel('${file}')">Læs Excel fil</button>
+                            <button onclick="showExcelFullscreen()">Vis i Fuldskærm</button><br>`).join('') : 
+                            `<button onclick="readExcel('${point.excelLink}')">Læs Excel fil</button>
+                            <button onclick="showExcelFullscreen()">Vis i Fuldskærm</button><br>`}
+                    </div>
+                    <div class="excel-table" id="excelContent"></div>
+                </div>
+            `).addTo(map);
+        });
+
+        // Funktion til at åbne billedet i fuldskærm
+        function openFullscreen(imgSrc) {
+            const img = document.createElement('img');
+            img.src = imgSrc;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain'; // Beholder billedets proportioner
+            img.style.position = 'fixed';
+            img.style.top = '0';
+            img.style.left = '0';
+            img.style.zIndex = '10000'; // Sørg for, at billedet er oven på alt andet
+            img.onclick = function() {
+                document.body.removeChild(img); // Luk fuldskærm ved at klikke
+            };
+            document.body.appendChild(img); // Tilføj billedet til body
+        }
+
+        // Funktion til at læse Excel-filen og vise indholdet
+        function readExcel(file) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', file, true);
+            xhr.responseType = 'arraybuffer';
+
+            xhr.onload = function(e) {
+                const data = new Uint8Array(xhr.response);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+
+                // Generer HTML fra Excel-data
+                const html = XLSX.utils.sheet_to_html(worksheet, { header: 1 });
+                document.getElementById('excelContent').innerHTML = html;
+            };
+
+            xhr.send();
+        }
+
+        // Funktion til at vise Excel i fuldskærm
+        function showExcelFullscreen() {
+            const excelContent = document.getElementById('excelContent');
+            if (excelContent && excelContent.innerHTML.trim() !== "") {
+                const fullScreenDiv = document.createElement('div');
+                fullScreenDiv.style.position = 'fixed';
+                fullScreenDiv.style.top = '0';
+                fullScreenDiv.style.left = '0';
+                fullScreenDiv.style.width = '100%';
+                fullScreenDiv.style.height = '100%';
+                fullScreenDiv.style.backgroundColor = 'white';
+                fullScreenDiv.style.zIndex = '10000';
+                fullScreenDiv.style.overflow = 'auto';
+                fullScreenDiv.innerHTML = `<h2>Excel Indhold</h2>${excelContent.innerHTML}`;
+                fullScreenDiv.onclick = function() {
+                    document.body.removeChild(fullScreenDiv); // Luk fuldskærm ved at klikke
+                };
+                document.body.appendChild(fullScreenDiv); // Tilføj fuldskærm div til body
+            } else {
+                alert("Indlæs Excel-filen først for at vise den i fuldskærm!");
+            }
+        }
+
+        // Aktiver måleværktøj
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        var drawControl = new L.Control.Draw({
+            edit: {
+                featureGroup: drawnItems
+            },
+            draw: {
+                polygon: true,
+                polyline: true,
+                rectangle: true,
+                circle: true,
+                marker: true,
+                circlemarker: false
+            }
+        });
+
+        document.getElementById('measureBtn').onclick = function() {
+            map.addControl(drawControl);
+            document.getElementById('measureBtn').style.display = 'none';
+            document.getElementById('stopMeasureBtn').style.display = 'block';
+        };
+
+        document.getElementById('stopMeasureBtn').onclick = function() {
+            map.removeControl(drawControl);
+            document.getElementById('measureBtn').style.display = 'block';
+            document.getElementById('stopMeasureBtn').style.display = 'none';
+        };
+
+        // Aktiver koordinatvælger
+        var currentCoordinates = document.getElementById('coordinates');
+        document.getElementById('coordinateBtn').onclick = function() {
+            map.on('click', function(event) {
+                var lat = event.latlng.lat.toFixed(5);
+                var lng = event.latlng.lng.toFixed(5);
+                currentCoordinates.innerHTML = "Koordinater: " + lat + ", " + lng;
+            });
+
+            document.getElementById('coordinateBtn').style.display = 'none';
+            document.getElementById('stopCoordinateBtn').style.display = 'block';
+        };
+
+        document.getElementById('stopCoordinateBtn').onclick = function() {
+            map.off('click');
+            document.getElementById('coordinateBtn').style.display = 'block';
+            document.getElementById('stopCoordinateBtn').style.display = 'none';
+        };
+    </script>
+</body>
+</html>

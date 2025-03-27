@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kort over plantager på Sankt Croix i 1799</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+
+    <!-- XLSX.js for reading Excel files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { height: 600px; width: 100%; }
+        h1 { text-align: center; margin-top: 20px; }
+        .popup-content img { max-width: 100px; height: auto; display: block; margin: 5px 0; }
+        .popup-content { max-width: 400px; overflow: auto; }
+        .excel-table { max-height: 300px; overflow-y: auto; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .tools-container { position: fixed; bottom: 10px; left: 10px; background: white; padding: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 1000; }
+    </style>
+</head>
+<body>
+    <h1>Sankt Croix Anno 1799</h1>
+    <div id="map"></div>
+    <div id="footer">Udarbejdet af Erik Luis Lanuza Oehlerich</div>
+
+    <!-- Værktøjer -->
+    <div class="tools-container">
+        <h3>Måleværktøj</h3>
+        <button id="measureBtn">Aktiver</button>
+        <button id="stopMeasureBtn" style="display:none;">Deaktiver</button>
+    </div>
+
+    <div class="tools-container" style="left: 150px;">
+        <h3>Koordinater</h3>
+        <button id="coordinateBtn">Aktiver</button>
+        <button id="stopCoordinateBtn" style="display:none;">Deaktiver</button>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        var map = L.map('map').setView([17.7421648, -64.7560983], 12);
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
+        var customTiles = L.tileLayer('https://mapserver.sanktcroixhistorie.dk/{z}/{x}/{y}.png', { attribution: '© Erik Oehlerich', maxZoom: 19 }).addTo(map);
+        var markers = L.markerClusterGroup();
+
+        var points = [
+            {  
+                coordinates: [17.705999, -64.88343], navn: "Matrikel nr. 37, Two Brothers", nabolag: "West Ende", ejer: "Richard Forster",
+                image: ['West_End_distrikt/point37/401.jpg', 'West_End_distrikt/point37/402.jpg'],
+                excelLink: ['West_End_distrikt/point37/point37_401_1.xlsx', 'West_End_distrikt/point37/point37_402_1.xlsx']
+            },
+            {  
+                coordinates: [17.710251, -64.871049], navn: "Matrikel nr. 39 & 38, Wheel of Fortune", nabolag: "West Ende", ejer: "George S: Hardieng Esqr",
+                image: ['West_End_distrikt/point38/406.jpg'],
+                excelLink: ['West_End_distrikt/point38/point38_406_1.xlsx']
+            }
+        ];
+
+        points.forEach(point => {
+            const marker = L.marker(point.coordinates);
+            let imageIndex = 0;
+            let popupContent = `
+                <div class="popup-content">
+                    <strong>${point.navn}</strong><br>
+                    <strong>${point.nabolag}</strong><br>
+                    <strong>${point.ejer}</strong><br>
+                    <div>
+                        <strong>Billeder:</strong><br>
+                        <img id="img-${point.navn}" src="${point.image[0]}" alt="Billede">
+                        <br><button onclick="prevImage('${point.navn}')">Forrige</button>
+                        <button onclick="nextImage('${point.navn}')">Næste</button>
+                    </div>
+                    <div>
+                        <strong>Excel Filer:</strong><br>
+                        ${point.excelLink.map(file => `<button onclick="readExcel('${file}')">Læs</button>`).join(' ')}
+                    </div>
+                    <div class="excel-table" id="excelContent"></div>
+                </div>
+            `;
+            marker.bindPopup(popupContent);
+            markers.addLayer(marker);
+        });
+
+        map.addLayer(markers);
+
+        function prevImage(navn) {
+            const point = points.find(p => p.navn === navn);
+            imageIndex = (imageIndex - 1 + point.image.length) % point.image.length;
+            document.getElementById(`img-${navn}`).src = point.image[imageIndex];
+        }
+
+        function nextImage(navn) {
+            const point = points.find(p => p.navn === navn);
+            imageIndex = (imageIndex + 1) % point.image.length;
+            document.getElementById(`img-${navn}`).src = point.image[imageIndex];
+        }
+
+        function readExcel(file) {
+            fetch(file)
+                .then(response => response.arrayBuffer())
+                .then(data => {
+                    const workbook = XLSX.read(new Uint8Array(data), { type: 'array' });
+                    const sheet = XLSX.utils.sheet_to_html(workbook.Sheets[workbook.SheetNames[0]]);
+                    document.getElementById('excelContent').innerHTML = sheet;
+                });
+        }
+
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        var drawControl = new L.Control.Draw({ edit: { featureGroup: drawnItems }, draw: { polygon: true, polyline: true, rectangle: true, circle: true, marker: true } });
+
+        document.getElementById('measureBtn').onclick = function() {
+            map.addControl(drawControl);
+            document.getElementById('measureBtn').style.display = 'none';
+            document.getElementById('stopMeasureBtn').style.display = 'inline';
+        };
+
+        document.getElementById('stopMeasureBtn').onclick = function() {
+            map.removeControl(drawControl);
+            document.getElementById('measureBtn').style.display = 'inline';
+            document.getElementById('stopMeasureBtn').style.display = 'none';
+        };
+
+        map.on('click', function(e) {
+            if (document.getElementById('coordinateBtn').style.display === 'none') {
+                alert("Koordinater: " + e.latlng.toString());
+            }
+        });
+    </script>
+</body>
+</html>

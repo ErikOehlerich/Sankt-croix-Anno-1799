@@ -98,6 +98,12 @@
     <div id="map"></div>
     <div id="footer">Udarbejdet af Erik Luis Lanuza Oehlerich</div>
     
+    <!-- Søgning -->
+    <div id="searchContainer" style="position: fixed; top: 10px; left: 10px; z-index: 1000; background-color: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);">
+        <input type="text" id="searchInput" placeholder="Søg efter marker..." style="width: 200px; padding: 5px;">
+        <button id="searchBtn">Søg</button>
+    </div>
+
     <!-- Værktøjer -->
     <div class="tools-container measure">
         <h3>Måleværktøj</h3>
@@ -120,7 +126,9 @@
 
     <script>
         // Initialiser kortet
-        var map = L.map('map').setView([17.7421648, -64.7560983], 12); // Centrer kortet
+        var map = L.map('map', {
+            zoomControl: false // Disable default zoom controls
+        }).setView([17.7421648, -64.7560983], 12); // Centrer kortet
 
         // Definer baggrundskortene
         var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -233,17 +241,15 @@
                     <div>
                         <strong>Excel Filer:</strong><br>
                         ${Array.isArray(point.excelLink) ? point.excelLink.map(file => 
-                            `<button onclick="readExcel('${file}')">Læs Excel fil</button>
-                            <button onclick="showExcelFullscreen()">Vis i Fuldskærm</button><br>`).join('') : 
-                            `<button onclick="readExcel('${point.excelLink}')">Læs Excel fil</button>
-                            <button onclick="showExcelFullscreen()">Vis i Fuldskærm</button><br>`}
+                            `<button onclick="readExcel('${file}')">Læs Excel fil</button><br>`).join('') : 
+                            `<button onclick="readExcel('${point.excelLink}')">Læs Excel fil</button><br>`}
                     </div>
                     <div class="excel-table" id="excelContent"></div>
                 </div>
             `).addTo(map);
         });
 
-        // Funktion til at åbne billedet i fuldskærm
+        // Funktion til at åbne billedet i fuldskærm med zoom og rotation funktioner
         function openFullscreen(imgSrc) {
             const img = document.createElement('img');
             img.src = imgSrc;
@@ -254,13 +260,94 @@
             img.style.top = '0';
             img.style.left = '0';
             img.style.zIndex = '10000'; // Sørg for, at billedet er oven på alt andet
-            img.onclick = function() {
-                document.body.removeChild(img); // Luk fuldskærm ved at klikke
+            img.style.transform = 'scale(1) rotate(0deg)'; // Start med standard zoom og rotation
+            img.style.transition = 'transform 0.2s'; // Glidende zoom og rotation
+
+            // Luk fuldskærm ved klik på billedet
+            img.onclick = function () {
+                document.body.removeChild(img);
+                document.body.removeChild(controlBox);
             };
+
+            // Tilføj kontrolboks
+            const controlBox = document.createElement('div');
+            controlBox.style.position = 'fixed';
+            controlBox.style.bottom = '10px';
+            controlBox.style.right = '10px';
+            controlBox.style.backgroundColor = 'white';
+            controlBox.style.padding = '10px';
+            controlBox.style.borderRadius = '5px';
+            controlBox.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+            controlBox.style.zIndex = '10001';
+            controlBox.style.maxHeight = '200px';
+            controlBox.style.overflow = 'hidden';
+            controlBox.style.transition = 'max-height 0.3s';
+            controlBox.innerHTML = `
+                <button id="toggleControls">▼</button>
+                <div id="controlButtons" style="display: none;">
+                    <button id="zoomInFullscreen">Zoom +</button>
+                    <button id="zoomOutFullscreen">Zoom -</button>
+                    <button id="rotateLeftFullscreen">Rotér ⟲</button>
+                    <button id="rotateRightFullscreen">Rotér ⟳</button>
+                </div>
+            `;
+
+            let scale = 1; // Start zoom niveau
+            let rotation = 0; // Start rotation
+
+            // Zoom ind
+            controlBox.addEventListener('click', function (event) {
+                if (event.target.id === 'zoomInFullscreen') {
+                    scale += 0.1;
+                    img.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+                }
+            });
+
+            // Zoom ud
+            controlBox.addEventListener('click', function (event) {
+                if (event.target.id === 'zoomOutFullscreen') {
+                    scale = Math.max(0.1, scale - 0.1); // Undgå negativ zoom
+                    img.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+                }
+            });
+
+            // Rotér venstre
+            controlBox.addEventListener('click', function (event) {
+                if (event.target.id === 'rotateLeftFullscreen') {
+                    rotation -= 15; // Rotér 15 grader mod uret
+                    img.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+                }
+            });
+
+            // Rotér højre
+            controlBox.addEventListener('click', function (event) {
+                if (event.target.id === 'rotateRightFullscreen') {
+                    rotation += 15; // Rotér 15 grader med uret
+                    img.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+                }
+            });
+
+            // Udvid eller skjul kontrolknapper
+            controlBox.addEventListener('click', function (event) {
+                if (event.target.id === 'toggleControls') {
+                    const controlButtons = document.getElementById('controlButtons');
+                    if (controlButtons.style.display === 'none') {
+                        controlButtons.style.display = 'block';
+                        controlBox.style.maxHeight = '200px';
+                        event.target.textContent = '▲';
+                    } else {
+                        controlButtons.style.display = 'none';
+                        controlBox.style.maxHeight = '40px';
+                        event.target.textContent = '▼';
+                    }
+                }
+            });
+
             document.body.appendChild(img); // Tilføj billedet til body
+            document.body.appendChild(controlBox); // Tilføj kontrolboks
         }
 
-        // Funktion til at læse Excel-filen og vise indholdet
+        // Funktion til at læse Excel-filen og vise indholdet i fuldskærm
         function readExcel(file) {
             const xhr = new XMLHttpRequest();
             xhr.open('GET', file, true);
@@ -274,16 +361,8 @@
 
                 // Generer HTML fra Excel-data
                 const html = XLSX.utils.sheet_to_html(worksheet, { header: 1 });
-                document.getElementById('excelContent').innerHTML = html;
-            };
 
-            xhr.send();
-        }
-
-        // Funktion til at vise Excel i fuldskærm
-        function showExcelFullscreen() {
-            const excelContent = document.getElementById('excelContent');
-            if (excelContent && excelContent.innerHTML.trim() !== "") {
+                // Vis Excel-data i fuldskærm
                 const fullScreenDiv = document.createElement('div');
                 fullScreenDiv.style.position = 'fixed';
                 fullScreenDiv.style.top = '0';
@@ -293,15 +372,155 @@
                 fullScreenDiv.style.backgroundColor = 'white';
                 fullScreenDiv.style.zIndex = '10000';
                 fullScreenDiv.style.overflow = 'auto';
-                fullScreenDiv.innerHTML = `<h2>Excel Indhold</h2>${excelContent.innerHTML}`;
+                fullScreenDiv.innerHTML = `<h2>Excel Indhold</h2>${html}`;
                 fullScreenDiv.onclick = function() {
                     document.body.removeChild(fullScreenDiv); // Luk fuldskærm ved at klikke
                 };
+
                 document.body.appendChild(fullScreenDiv); // Tilføj fuldskærm div til body
+            };
+
+            xhr.send();
+        }
+
+        // Funktion til at læse Excel-data og returnere indhold som tekst
+        function getExcelContent(file) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', file, true);
+                xhr.responseType = 'arraybuffer';
+
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        try {
+                            const data = new Uint8Array(xhr.response);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const firstSheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[firstSheetName];
+
+                            // Konverter Excel-data til tekst
+                            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                            const flatContent = jsonData.flat().join(' ').toLowerCase(); // Flad tekst til søgning
+                            resolve(flatContent);
+                        } catch (error) {
+                            console.error(`Error processing Excel file: ${file}`, error);
+                            resolve(''); // Resolve with empty content to avoid breaking the filtering process
+                        }
+                    } else {
+                        console.error(`Failed to load Excel file: ${file}`);
+                        resolve(''); // Resolve with empty content to avoid breaking the filtering process
+                    }
+                };
+
+                xhr.onerror = function () {
+                    console.error(`Error loading Excel file: ${file}`);
+                    resolve(''); // Resolve with empty content to avoid breaking the filtering process
+                };
+
+                xhr.send();
+            });
+        }
+
+        // Funktion til at filtrere og aktivere/deaktivere markører baseret på søgning
+        async function filterMarkers(searchTerm) {
+            markers.clearLayers(); // Fjern alle markører fra kortet midlertidigt
+
+            let found = false; // Variabel til at spore, om der er fundet nogen match
+
+            for (const point of points) {
+                let match = false;
+
+                // Tjek om søgetermen matcher navn, nabolag eller ejer
+                if (
+                    point.navn.toLowerCase().includes(searchTerm) ||
+                    point.nabolag.toLowerCase().includes(searchTerm) ||
+                    point.ejer.toLowerCase().includes(searchTerm)
+                ) {
+                    match = true;
+                } else if (point.excelLink) {
+                    // Hvis der er en Excel-fil, læs dens indhold og søg
+                    try {
+                        const excelContent = await getExcelContent(point.excelLink);
+                        if (excelContent.includes(searchTerm)) {
+                            match = true;
+                        }
+                    } catch (error) {
+                        console.error(`Error reading Excel file for point: ${point.navn}`, error);
+                    }
+                }
+
+                // Hvis der er et match, tilføj markøren til kortet
+                if (match) {
+                    addMarkerToMap(point);
+                    found = true;
+                }
+            }
+
+            // Hvis der er fundet nogen match, tilføj marker cluster gruppen til kortet
+            if (found) {
+                map.addLayer(markers);
             } else {
-                alert("Indlæs Excel-filen først for at vise den i fuldskærm!");
+                console.log("Ingen match fundet.");
             }
         }
+
+        // Funktion til at tilføje en markør til kortet
+        function addMarkerToMap(point) {
+            const marker = L.circleMarker(point.coordinates, {
+                radius: 8,
+                color: '#ff7800',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).bindPopup(`
+                <div class="popup-content">
+                    <strong>Navn: ${point.navn}</strong><br>
+                    <strong>Nabolag: ${point.nabolag}</strong><br>
+                    <strong>Ejer: ${point.ejer}</strong><br>
+                    <div>
+                        <strong>Billeder:</strong><br>
+                        ${Array.isArray(point.image) ? point.image.map(img => 
+                            `<img src="${img}" alt="Billede">
+                            <button onclick="openFullscreen('${img}')">Vis i Fuldskærm</button><br>`).join('') : 
+                            `<img src="${point.image}" alt="Billede">
+                            <button onclick="openFullscreen('${point.image}')">Vis i Fuldskærm</button><br>`}
+                    </div>
+                    <div>
+                        <strong>Excel Filer:</strong><br>
+                        ${Array.isArray(point.excelLink) ? point.excelLink.map(file => 
+                            `<button onclick="readExcel('${file}')">Læs Excel fil</button><br>`).join('') : 
+                            `<button onclick="readExcel('${point.excelLink}')">Læs Excel fil</button><br>`}
+                    </div>
+                    <div class="excel-table" id="excelContent"></div>
+                </div>
+            `);
+            markers.addLayer(marker); // Tilføj markøren til marker cluster gruppen
+        }
+
+        // Event listener til søgeknappen
+        document.getElementById('searchBtn').onclick = function () {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            filterMarkers(searchTerm);
+        };
+
+        // Event listener til søgefeltet for "Enter"-tast
+        document.getElementById('searchInput').addEventListener('keypress', function (event) {
+            if (event.key === 'Enter') {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                filterMarkers(searchTerm);
+            }
+        };
+
+        // Tilføj en knap til at vise alle markører igen
+        const showAllBtn = document.createElement('button');
+        showAllBtn.textContent = 'Vis alle markører';
+        showAllBtn.style.marginLeft = '10px';
+        showAllBtn.onclick = function () {
+            markers.clearLayers(); // Fjern alle markører fra kortet
+            points.forEach(addMarkerToMap); // Tilføj alle markører igen
+            map.addLayer(markers); // Tilføj marker cluster gruppen til kortet
+        };
+        document.getElementById('searchContainer').appendChild(showAllBtn);
 
         // Aktiver måleværktøj
         var drawnItems = new L.FeatureGroup();

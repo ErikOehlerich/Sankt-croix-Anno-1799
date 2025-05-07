@@ -2277,10 +2277,14 @@
                 fullScreenDiv.innerHTML = `
                     <div style="padding: 20px;">
                         <h2>Excel Indhold</h2>
-                        <button style="margin-bottom: 10px;" onclick="document.body.removeChild(this.parentElement.parentElement)">Luk</button>
                         ${excelContent}
                     </div>
                 `;
+
+                // Close fullscreen on click
+                fullScreenDiv.addEventListener('click', () => {
+                    document.body.removeChild(fullScreenDiv);
+                });
 
                 document.body.appendChild(fullScreenDiv);
             } catch (error) {
@@ -2412,12 +2416,20 @@
             let dragEnabled = true; // Drag functionality toggle
             let startX, startY, currentX = 0, currentY = 0;
 
+            // Close fullscreen only if drag is disabled
+            fullScreenDiv.addEventListener('click', () => {
+                if (!dragEnabled) {
+                    document.body.removeChild(fullScreenDiv);
+                    document.body.removeChild(controlBox);
+                }
+            });
+
             // Start dragging on mousedown
             fullScreenDiv.addEventListener('mousedown', (event) => {
                 if (dragEnabled && event.button === 0) { // Only respond to left mouse button if drag is enabled
                     isDragging = true;
                     startX = event.clientX - currentX;
-                    startY = event.clientY - startY;
+                    startY = event.clientY - currentY;
                     fullScreenDiv.style.cursor = 'grabbing';
                 }
             });
@@ -2434,21 +2446,24 @@
             // Stop dragging on mouseup
             fullScreenDiv.addEventListener('mouseup', () => {
                 isDragging = false;
-                fullScreenDiv.style.cursor = 'grab';
+                fullScreenDiv.style.cursor = dragEnabled ? 'grab' : 'default';
             });
 
             // Stop dragging if the mouse leaves the full-screen area
             fullScreenDiv.addEventListener('mouseleave', () => {
                 isDragging = false;
-                fullScreenDiv.style.cursor = 'grab';
+                fullScreenDiv.style.cursor = dragEnabled ? 'grab' : 'default';
             });
 
             // Zoom in/out with mouse wheel
             fullScreenDiv.addEventListener('wheel', (event) => {
                 event.preventDefault();
                 const zoomStep = 0.1;
+
+                const prevScale = scale;
                 scale += event.deltaY < 0 ? zoomStep : -zoomStep;
                 scale = Math.max(0.1, scale); // Prevent negative or zero scale
+
                 img.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale}) rotate(${rotation}deg)`;
             });
 
@@ -2468,7 +2483,6 @@
                 <button id="rotateLeftFullscreen">Rotér ⟲</button>
                 <button id="rotateRightFullscreen">Rotér ⟳</button>
                 <button id="toggleDragFullscreen">Deaktiver Træk</button>
-                <button id="closeFullscreen">Luk</button>
             `;
 
             // Zoom ind
@@ -2498,13 +2512,8 @@
             // Toggle drag functionality
             controlBox.querySelector('#toggleDragFullscreen').onclick = (event) => {
                 dragEnabled = !dragEnabled;
+                fullScreenDiv.style.cursor = dragEnabled ? 'grab' : 'default';
                 event.target.textContent = dragEnabled ? 'Deaktiver Træk' : 'Aktiver Træk';
-            };
-
-            // Luk fuldskærm
-            controlBox.querySelector('#closeFullscreen').onclick = () => {
-                document.body.removeChild(fullScreenDiv);
-                document.body.removeChild(controlBox);
             };
 
             fullScreenDiv.appendChild(img);
@@ -2616,4 +2625,3 @@
     </script>
 </body>
 </html>
-`

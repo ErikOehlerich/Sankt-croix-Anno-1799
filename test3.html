@@ -2199,8 +2199,10 @@
                             let html = XLSX.utils.sheet_to_html(worksheet, { editable: false });
 
                             // Fremhæv søgeterm i HTML-indholdet uden at ændre Excel-data
-                            if (regex) {
-                                html = html.replace(regex, `<span style="background-color: yellow;">$1</span>`);
+                            if (searchTerm) {
+                                const escapedSearchTerm = regex.source; // Use the regex source for highlighting
+                                const highlightRegex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+                                html = html.replace(highlightRegex, `<span style="background-color: yellow;">$1</span>`);
                             }
 
                             resolve(html);
@@ -2258,20 +2260,9 @@
         // Funktion til at vise Excel-indhold i fuldskærm
         async function viewExcelFullscreen(file, searchTerm) {
             try {
-                let regex = null;
-
-                if (searchTerm) {
-                    if (searchTerm.startsWith('"') && searchTerm.endsWith('"')) {
-                        // Exact match search (quoted)
-                        const exactTerm = searchTerm.slice(1, -1).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                        regex = new RegExp(`\\b${exactTerm}\\b`, 'gi'); // Match exact word/phrase
-                    } else {
-                        // Normal search (substring match)
-                        const escapedSearchTerm = searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                        regex = new RegExp(escapedSearchTerm, 'gi'); // Case-insensitive regex
-                    }
-                }
-
+                const regex = searchTerm
+                    ? new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi')
+                    : null; // Create regex for highlighting if searchTerm exists
                 const excelContent = await getExcelContentWithHighlight(file, searchTerm, regex);
 
                 const fullScreenDiv = document.createElement('div');
@@ -2625,3 +2616,4 @@
     </script>
 </body>
 </html>
+`

@@ -1,4 +1,4 @@
-All the Excel files with the transcribed lists and the actual code can't be for commercial use without prior written confirmation.
+The Excel files, including the transcribed lists and the actual code, cannot be used commercially without prior written confirmation.
 
 The cadastral list pictures are from the National Archive of Denmark. 
 
@@ -9,7 +9,7 @@ The map of Sanct Croix is from the royal libraries collection and is in the publ
 Link to my map project.
 https://erikoehlerich.github.io/Sankt-croix-Anno-1799/
 
-To the tiles 
+Link to the tiles 
 https://github.com/ErikOehlerich/Map-of-Sanct-Croix-tiles 
 
 Link to the Danish National Archive

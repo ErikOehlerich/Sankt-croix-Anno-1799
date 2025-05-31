@@ -1,4 +1,5 @@
 The Excel files, including the transcribed lists and the actual code, cannot be used commercially without prior written confirmation.
+Feel free to use it for research or academic goals.
 
 The cadastral list pictures are from the National Archive of Denmark. 
 
@@ -18,4 +19,4 @@ https://arkivalieronline.rigsarkivet.dk/da/billedviser?epid=17241563#209920,3958
 Link to the map over Sankt Croix from the Royal Danish Library>
 http://www5.kb.dk/maps/kortsa/2012/jul/kortatlas/object65447/da/ 
 
-All of this is backed up on Zonodo.com
+All of this is backed up on Zonodo.org

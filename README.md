@@ -5,7 +5,7 @@ The cadastral list pictures are from the National Archive of Denmark.
 
 All the pictures are publicly available.
 
-The map of Sanct Croix is from the Royal Library's collection and is in the public domain.
+The map of Saint Croix is from the Royal Library's collection and is in the public domain.
 
 Link to my map project.
 https://erikoehlerich.github.io/Sankt-croix-Anno-1799/
@@ -19,4 +19,4 @@ https://arkivalieronline.rigsarkivet.dk/da/billedviser?epid=17241563#209920,3958
 Link to the map of Sankt Croix from the Royal Danish Library>
 http://www5.kb.dk/maps/kortsa/2012/jul/kortatlas/object65447/da/ 
 
-All of this is backed up on Zonodo.org
+All of this is backed up on Zenodo.org

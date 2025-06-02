@@ -11,7 +11,7 @@ Link to my map project.
 https://erikoehlerich.github.io/Sankt-croix-Anno-1799/
 
 Link to the tiles 
-https://github.com/ErikOehlerich/Map-of-Sanct-Croix-tiles 
+https://github.com/ErikOehlerich/Map-of-Saint-Croix-tiles
 
 Link to the Danish National Archive
 https://arkivalieronline.rigsarkivet.dk/da/billedviser?epid=17241563#209920,39586192 

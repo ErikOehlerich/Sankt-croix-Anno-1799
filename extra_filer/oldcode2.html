@@ -1,0 +1,2723 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kort over plantager på Sankt Croix i 1799</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+    
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<!-- ...resten af head... -->
+   
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            height: 600px;  /* Kortets højde */
+            width: 100%;  /* Kortets bredde */
+            position: relative;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #footer {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background-color: #fff;
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .popup-content {
+            max-width: 400px; /* Maksimal bredde af popuppen */
+            overflow: auto; /* Tillad scrolling, hvis indholdet er for stort */
+        }
+        .excel-table {
+            max-height: 300px; /* Sætter maksimal højde på Excel-tabellen */
+            overflow-y: auto; /* Tillader lodret scrolling */
+            margin-top: 10px; /* Margin for lidt afstand fra billedet */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        /* Stil for værktøjsboksen i Leaflet-kortet */
+        .leaflet-control.tools-box {
+            background-color: white;
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            max-width: 50px;
+            max-height: 50px; /* Minimeret højde */
+            overflow: hidden;
+            transition: max-height 0.3s ease, max-width 0.3s ease, padding 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .leaflet-control.tools-box:hover {
+            max-height: 300px; /* Udvidet højde */
+            max-width: 200px; /* Udvidet bredde */
+            padding: 10px;
+        }
+
+        .leaflet-control.tools-box img {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+
+        .leaflet-control.tools-box button {
+            display: block;
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        /* Begræns billedets størrelse i popuppen */
+        .popup-content img {
+            max-width: 100px; /* Begræns bredden */
+            height: auto;     /* Bevar proportionerne */
+            display: block;   /* Forhindrer inline layout-forstyrrelser */
+            margin: 5px 0;    /* Tilføj lidt afstand omkring billederne */
+        }
+
+        /* Stil for søgefeltet under kortet */
+        #searchContainer {
+            position: relative;
+            margin: 10px auto;
+            z-index: 1000;
+            background-color: white;
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            max-width: 40px;
+            max-height: 40px; /* Minimized height */
+            overflow: hidden;
+            transition: max-height 0.3s ease, max-width 0.3s ease, padding 0.3s ease;
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
+            align-items: center;
+            justify-content: center;
+        }
+
+        #searchContainer:hover,
+        #searchContainer:focus-within {
+            max-height: 200px; /* Expanded height */
+            max-width: 200px; /* Expanded width */
+            padding: 10px;
+        }
+
+        #searchContainer img {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            margin-bottom: 5px; /* Add space between the icon and the input */
+        }
+
+        #searchContainer input,
+        #searchContainer button,
+        #searchContainer span {
+            display: none; /* Hide content by default */
+        }
+
+        #searchContainer:hover input,
+        #searchContainer:hover button,
+        #searchContainer:hover span,
+        #searchContainer:focus-within input,
+        #searchContainer:focus-within button,
+        #searchContainer:focus-within span {
+            display: block; /* Show content on hover or focus */
+            width: 100%;
+            margin-bottom: 5px; /* Add space between elements */
+        }
+
+        #searchContainer input {
+            padding: 5px;
+            text-align: left; /* Align text to the left */
+        }
+
+        #searchContainer button {
+            padding: 5px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        #searchContainer span {
+            text-align: center;
+            font-size: 12px;
+        }
+
+        /* Custom styles for zoom controls */
+        .leaflet-control.zoom-control {
+            background: white;
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+        }
+
+        .leaflet-control.zoom-control button {
+            display: block;
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 5px;
+            font-size: 18px; /* Increased font size */
+            font-weight: bold; /* Thicker font */
+            cursor: pointer;
+            height: 50px; /* Set a fixed height */
+            line-height: 50px; /* Center text vertically */
+        }
+    </style>
+</head>
+<body>
+    <h1></h1>
+    <div id="map"></div>
+
+    <!-- Søgning -->
+    <div id="searchContainer">
+        <img src="https://cdn-icons-png.flaticon.com/512/622/622669.png" alt="Magnifying Glass Icon">
+        <input type="text" id="searchInput" placeholder="Søg efter marker...">
+        <button id="searchBtn">Søg</button>
+        <span id="hitCount">Antal fundet: 0</span>
+    </div>
+
+    <div id="footer">Lavet af Erik Luis Lanuza Oehlerich</div>
+    
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+
+    <!-- Leaflet MarkerCluster JavaScript -->
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // Initialiser kortet
+        var map = L.map('map', {
+            zoomControl: false // Disable default zoom controls
+        }).setView([17.7421648, -64.7560983], 12); // Centrer kortet
+
+        // Definer baggrundskortene
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        });
+
+        var googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            attribution: '© Google',
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            maxZoom: 20
+        });
+
+        var googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            attribution: '© Google',
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            maxZoom: 20
+        });
+
+        var mapbox = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=your.mapbox.access.token', {
+            attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a>',
+            id: 'mapbox/streets-v11',
+            tileSize: 512,
+            zoomOffset: -1,
+            maxZoom: 20
+        });
+
+        // Definer dine tile layers som overlay
+        var customTiles = L.tileLayer('https://erikoehlerich.github.io/Map-of-Saint-Croix-tiles/{z}/{x}/{y}.png', {
+            attribution: '© Erik Oehlerich',
+            maxZoom: 19
+        });
+
+        // Tilføj baggrundskort som basislag
+        var baseLayers = {
+            "OpenStreetMap": osm,
+            "Google Satellite": googleSat,
+            "Google Streets": googleStreets,
+            "Mapbox Streets": mapbox
+        };
+
+        // Tilføj custom tiles som overlay og slå det til som standard
+        var overlays = {
+            "Custom Tiles": customTiles
+        };
+
+        // Tilføj baseLayers og overlays til kortet
+        L.control.layers(baseLayers, overlays).addTo(map);
+
+        // Tilføj OSM som standard baggrundskort
+        osm.addTo(map);
+        customTiles.addTo(map);
+
+        // Array af punkter
+        var points = [
+        {
+            coordinates: [17.7687222, -64.747195],
+            navn: "Matrikel nr. 1, Judith’s Fancy",
+            nabolag: "Dronningens Kvarter",
+            ejer: "the Heirs John Bennens Esqr",
+            image: 'dronningens_distrikt/point1/4.png',
+            csvLink: 'dronningens_distrikt/point1/point1_4_1.csv'
+        },
+        {
+            coordinates: [17.763757, -64.745564],
+            navn: "Matrikel nr. 2, St. John",
+            nabolag: "Dronningens Kvarter",
+            ejer: "John Heyliger Burt",
+            image: 'dronningens_distrikt/point2/7.png',
+            csvLink: 'dronningens_distrikt/point2/point2_7_1.csv'
+        },
+        {
+            coordinates: [17.762306, -64.758675],
+            navn: "Matrikel nr. 3 & 10, Montpiller",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Counsellor Lillienschjold",
+            image: 'dronningens_distrikt/point3/10.png',
+            csvLink: 'dronningens_distrikt/point3/point3_10_1.csv'
+        },
+        {
+            coordinates: [17.759495, -64.77715],
+            navn: "Matrikel nr. 6, Windson",
+            nabolag: "Dronningens Kvarter",
+            ejer: "G M Brotherson & Mrs Elizabeth Chabert",
+            image: ['dronningens_distrikt/point6/18.png',
+                   'dronningens_distrikt/point6/20.png'],
+            csvLink: ['dronningens_distrikt/point6/point6_18_1.csv',
+                   'dronningens_distrikt/point6/point6_20_1.csv']
+        },
+        {
+            coordinates: [17.752272, -64.774468],
+            navn: "Matrikel nr. 7, The Glynn",
+            nabolag: "Dronningens Kvarter",
+            ejer: "James Johnson",
+            image: 'dronningens_distrikt/point7/22.png',
+            csvLink: 'dronningens_distrikt/point7/point7_22_1.csv'
+        },
+        {
+            coordinates: [17.75266, -64.767301],
+            navn: "Matrikel nr. 8, Concordia",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Samuel Foster Esqr & William Knox & Joseph P: Maillard",
+            image: ['dronningens_distrikt/point8/11.png',
+                   'dronningens_distrikt/point8/12.png',
+                'dronningens_distrikt/point8/13.png',
+                'dronningens_distrikt/point8/14.png',
+                'dronningens_distrikt/point8/15.png'],
+            csvLink: ['dronningens_distrikt/point8/point8_11_1.csv',
+                   'dronningens_distrikt/point8/point8_12_1.csv',
+                     'dronningens_distrikt/point8/point8_13_1.csv',
+                     'dronningens_distrikt/point8/point8_14_1.csv',
+                     'dronningens_distrikt/point8/point8_15_1.csv']
+        },
+        {
+            coordinates: [17.752415, -64.761829],
+            navn: "Matrikel nr. 9, Morning Star",
+            nabolag: "Dronningens Kvarter",
+            ejer: "William Macdougal & James Lawson",
+            image: ['dronningens_distrikt/point9/25.png',
+                    'dronningens_distrikt/point9/28.png'],
+            csvLink: ['dronningens_distrikt/point9/point9_25_1.csv',
+                    'dronningens_distrikt/point9/point9_28_1.csv']
+        },
+        {
+            coordinates: [17.737544, -64.791062],
+            navn: "Matrikel nr. 13 & 14, Rattan & Bellindere",
+            nabolag: "Dronningens Kvarter",
+            ejer: "George Aitkin Esquire",
+            image: 'dronningens_distrikt/point13/29.png',
+            csvLink: 'dronningens_distrikt/point13/point13_29_1.csv'
+        },
+        {
+            coordinates: [17.727193, -64.793723],
+            navn: "Matrikel nr. 16 & 17, Marys Fancys",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Heirs of C. De Nelly",
+            image: 'dronningens_distrikt/point16/31.png',
+            csvLink: 'dronningens_distrikt/point16/point16_31_1.csv'
+        },
+        {
+            coordinates: [17.730983, -64.784301],
+            navn: "Matrikel nr. 18,  Bonne Esperance",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Benners & Kenney & George Allan & Andrew Kenny",
+            image: ['dronningens_distrikt/point18/34.png',
+                    'dronningens_distrikt/point18/35.png',
+                    'dronningens_distrikt/point18/36.png'],
+            csvLink: ['dronningens_distrikt/point18/point18_34_1.csv',
+                    'dronningens_distrikt/point18/point18_35_1.csv',
+                    'dronningens_distrikt/point18/point18_36_1.csv']
+        },
+        {
+            coordinates: [17.734574, -64.765198],
+            navn: "Matrikel nr. 19, Limetree",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Isaac Hartman Esqr",
+            image: 'dronningens_distrikt/point19/37.png',
+            csvLink: 'dronningens_distrikt/point19/point19_37_1.csv'
+        },
+        {
+            coordinates: [17.736842, -64.762237],
+            navn: "Matrikel nr. 20, Limetree",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Robert Suite & Richard Suite",
+            image: ['dronningens_distrikt/point20/47.png',
+                      'dronningens_distrikt/point20/50.png'],
+            csvLink: ['dronningens_distrikt/point20/point20_47_1.csv',
+                      'dronningens_distrikt/point20/point20_50_1.csv']
+        },
+        {
+            coordinates: [17.738854, -64.75625],
+            navn: "Matrikel nr. 21, Ruby",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Samuel Huyghue",
+            image: 'dronningens_distrikt/point21/39.png',
+            csvLink: 'dronningens_distrikt/point21/point21_39_1.csv'
+        },
+        {
+            coordinates: [17.736256, -64.747766],
+            navn: "Matrikel nr. 22, Sion Hill",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Thomas Bradshaw Esqr.",
+            image: 'dronningens_distrikt/point22/40.png',
+            csvLink: 'dronningens_distrikt/point22/point22_40_1.csv'
+        },
+        {
+            coordinates: [17.735207, -64.735072],
+            navn: "Matrikel nr. 25, Constitution Hill ",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Samuel Foster Esqur & Franken England",
+            image: ['dronningens_distrikt/point25/43.png',
+                    'dronningens_distrikt/point25/46.png'],
+            csvLink: ['dronningens_distrikt/point25/point25_43_1.csv',
+                    'dronningens_distrikt/point25/point25_46_1.csv']
+        },
+        {
+            coordinates: [17.729657, -64.759212],
+            navn: "Matrikel nr. 29, Strawberry Hill ",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Alexr. & the Heirs of John Tower",
+            image: ['dronningens_distrikt/point29/23.png',
+                    'dronningens_distrikt/point29/51.png',
+                    'dronningens_distrikt/point29/52.png'],
+            csvLink: ['dronningens_distrikt/point29/point29_23_1.csv',
+                    'dronningens_distrikt/point29/point29_51_1.csv',
+                    'dronningens_distrikt/point29/point29_52_1.csv']
+        },
+        {
+            coordinates: [17.727563, -64.765735],
+            navn: "Matrikel nr. 30, Moir / Lime tree? ",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Sams Sonson",
+            image: ['dronningens_distrikt/point30/56.png',
+                    'dronningens_distrikt/point30/57.png'],
+            csvLink: ['dronningens_distrikt/point30/point30_56_1.csv',
+                    'dronningens_distrikt/point30/point30_57_1.csv']
+        },
+        {
+            coordinates: [17.722692, -64.745654],
+            navn: "Matrikel nr. 33 & 34, Castle Coakley",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Heirs of John and Elizabeth Coakley & Robert Ronson & John B. Barnes",
+            image: ['dronningens_distrikt/point34/61.png',
+                    'dronningens_distrikt/point34/64.png'],
+            csvLink: ['dronningens_distrikt/point34/point34_61_1.csv',
+                    'dronningens_distrikt/point34/point34_64_1.csv']
+        },
+        {
+            coordinates: [17.724354, -64.738741],
+            navn: "Matrikel nr. 35, Pieters Rock",
+            nabolag: "Dronningens Kvarter",
+            ejer: "Heirs of C De Nully Deceased",
+            image: 'dronningens_distrikt/point35/66.png',
+            csvLink: 'dronningens_distrikt/point35/point35_66_1.csv'
+        },
+        {
+            coordinates: [17.719551, -64.729514],
+            navn: "Matrikel nr. 37, Work & rest Estate ",
+            nabolag: "Dronningens Kvarter",
+            ejer: "John Heyliger & Beny Reynold",
+            image: ['dronningens_distrikt/point37/68.png',
+                    'dronningens_distrikt/point37/70.png'],
+            csvLink: ['dronningens_distrikt/point37/point37_68_1.csv',
+                    'dronningens_distrikt/point37/point37_70_1.csv']
+        },
+        {
+            coordinates: [17.718529, -64.736381],
+            navn: "Matrikel nr. 38, Pearl",
+            nabolag: "Dronningens Kvarter",
+            ejer: " Will Amistrong Esqr",
+            image: 'dronningens_distrikt/point38/72.png',
+            csvLink: 'dronningens_distrikt/point38/point38_72_1.csv'
+        },
+        {
+            coordinates: [17.711988, -64.746809],
+            navn: "matrikel nr. 40, jerusalem",
+            nabolag: "dronningens kvarter",
+            ejer: " john dewints esqr & count rantzow ",
+            image: ['dronningens_distrikt/point40/75.png',
+                    'dronningens_distrikt/point40/77.png'],
+            csvLink: ['dronningens_distrikt/point40/point40_75_1.csv',
+                    'dronningens_distrikt/point40/point40_77_1.csv']
+        },
+        {
+            coordinates: [17.713051, -64.727755],
+            navn: "matrikel nr. 44a, hum bucg",
+            nabolag: "dronningens kvarter",
+            ejer: " johannes heyligare abz",
+            image: 'dronningens_distrikt/point44/84.png',
+            csvLink: 'dronningens_distrikt/point44/point44_84_1.csv'
+        },
+        {
+            coordinates: [17.704016, -64.726982],
+            navn: "matrikel nr. 45, cane garden",
+            nabolag: "dronningens kvarter",
+            ejer: " jasper parson",
+            image: 'dronningens_distrikt/point45/85.png',
+            csvLink: 'dronningens_distrikt/point45/point45_85_1.csv'
+        },
+        {
+            coordinates: [17.716403, -64.743934],
+            navn: "matrikel nr. 49, jerusalem",
+            nabolag: "dronningens kvarter",
+            ejer: "jugde winding & john wells ",
+            image: ['dronningens_distrikt/point49/87.png',
+                    'dronningens_distrikt/point49/89.png'],
+            csvLink: ['dronningens_distrikt/point49/point49_87_1.csv',
+                    'dronningens_distrikt/point49/point49_89_1.csv']
+        },
+ 
+        // east end b: kvarter
+        {
+            coordinates: [17.756829, -64.6404],
+            navn: "matrikel nr. 1, coakley bay",
+            nabolag: "east end b",
+            ejer: "john sheriff",
+            image: ['east_end_b_distrikt/point1/93.png',
+                    'east_end_b_distrikt/point1/94.png'],
+            csvLink: ['east_end_b_distrikt/point1/point1_93_1.csv',
+                    'east_end_b_distrikt/point1/point1_94_1.csv']
+        },
+ 
+        {
+            coordinates: [17.75029, -64.637868],
+            navn: "Matrikel nr. 2, Solitude",
+            nabolag: "East End B",
+            ejer: " Raapz Hyliger",
+            image: 'east_end_b_distrikt/point2/98.png',
+            csvLink: 'east_end_b_distrikt/point2/point2_98_1.csv'
+        },
+    
+        {
+            coordinates: [17.745446, -64.636302],
+            navn: "Matrikel nr. 3, Pleasent Vally",
+            nabolag: "East End B",
+            ejer: "Dan Merlett & Ann Merlett, Joseph P: Merlett & Jn° Danl Merlott",
+            image: ['east_end_b_distrikt/point3/103.png',
+                    'east_end_b_distrikt/point3/104.png',
+                    'east_End_B_distrikt/point3/105.png'],
+            csvLink: ['east_end_b_distrikt/point3/point3_103_1.csv',
+                    'east_end_b_distrikt/point3/point3_104_1.csv',
+                    'east_end_b_distrikt/point3/point3_105_1.csv']
+        },
+        {
+            coordinates: [17.72926, -64.629586],
+            navn: "Matrikel nr. 4 & 5, Little profit",
+            nabolag: "East End B",
+            ejer: "William Rayn & Daniel Rayn",
+            image: ['east_end_b_distrikt/point4/108.png',
+                    'east_end_b_distrikt/point4/109.png'],
+            csvLink: ['east_end_b_distrikt/point4/point4_108_1.csv',
+                    'east_end_b_distrikt/point4/point4_109_1.csv']
+        },
+
+        {
+            coordinates: [17.736699, -64.626453],
+            navn: "Matrikel nr. 6",
+            nabolag: "East End B",
+            ejer: " Jonathan Harragrin",
+            image: 'east_end_b_distrikt/point6/111.png',
+            csvLink: 'east_end_b_distrikt/point6/point6_111_1.csv'
+        },
+
+        {
+            coordinates: [17.756441, -64.627066],
+            navn: "Matrikel nr. 10, Mad Carty",
+            nabolag: "East End B",
+            ejer: "Benjamin Payne",
+            image: 'east_end_b_distrikt/point10/115.png',
+            csvLink: 'east_end_b_distrikt/point10/point10_115_1.csv'
+        },
+
+        {
+            coordinates: [17.738968, -64.61448],
+            navn: "Matrikel nr. 14",
+            nabolag: "East End B",
+            ejer: "Richard Carty",
+            image: 'east_end_b_distrikt/point14/112.png',
+            csvLink: 'east_end_b_distrikt/point14/point14_112_1.csv'
+        },
+
+        {
+            coordinates: [17.742013, -64.616539],
+            navn: "Matrikel nr. 15",
+            nabolag: "East End B",
+            ejer: "Arthur Carty",
+            image: ['east_end_b_distrikt/point15/113.png',
+                    'east_end_b_distrikt/point15/114.png'],
+            csvLink: ['east_end_b_distrikt/point15/point15_113_1.csv',
+                    'east_end_b_distrikt/point15/point15_114_1.csv']
+        },
+
+        {
+            coordinates: [17.745712, -64.615703],
+            navn: "Matrikel nr. 16",
+            nabolag: "East End B",
+            ejer: "Richard Carty",
+            image: 'east_end_b_distrikt/point16/116.png',
+            csvLink: 'east_end_b_distrikt/point16/point16_116_1.csv'
+        },
+
+        {
+            coordinates: [17.746652, -64.620209],
+            navn: "Matrikel nr. 17",
+            nabolag: "East End B",
+            ejer: "Thomas Carty",
+            image: 'east_end_b_distrikt/point17/119.png',
+            csvLink: 'east_end_b_distrikt/point17/point17_119_1.csv'
+        },
+
+        {
+            coordinates: [17.748757, -64.611604],
+            navn: "Matrikel nr. 22 & 23, Catherinas Hope",
+            nabolag: "East End B",
+            ejer: "Joseph Lake & Catherina Hoper",
+            image: 'east_end_b_distrikt/point22/121.png',
+            csvLink: 'east_end_b_distrikt/point22/point21_121_1.csv'
+        },
+
+        {
+            coordinates: [17.746877, -64.609802],
+            navn: "Matrikel nr.23 , Elizas Retreat",
+            nabolag: "East End B",
+            ejer: "Anna Elizabeth Wood",
+            image: 'east_end_b_distrikt/point23/149.png',
+            csvLink: 'east_end_b_distrikt/point23/point23_149_1.csv'
+        },
+
+        {
+            coordinates: [17.749065, -64.592873],
+            navn: "Matrikel nr. 28, 29, 30 og 37 , Slob Estate",
+            nabolag: "East End B",
+            ejer: "Jnr Richardsen & Bezaliel Hughes ",
+            image: 'east_end_b_distrikt/point28/123.png',
+            csvLink: 'east_end_b_distrikt/point28/point28_123_1.csv'
+        },
+
+        {
+            coordinates: [17.749493, -64.591477],
+            navn: "Matrikel nr.29 & 30, Grapetree Bay Estate",
+            nabolag: "East End B",
+            ejer: "William Mayer",
+            image: 'east_end_b_distrikt/point29/122.png',
+            csvLink: 'east_end_b_distrikt/point29/point29_122_1.csv'
+        },
+
+        // east end a: kvarter 
+
+        {
+            coordinates: [17.747102, -64.6928],
+            navn: "Matrikel nr.1 , Mount Welcome",
+            nabolag: "East End A",
+            ejer: "John Benners",
+            image: 'east_end_a_distrikt/point1/127.png', 
+            csvLink: 'east_end_a_distrikt/point1/point1_127_1.csv'
+        },
+
+        {
+            coordinates: [17.745773, -64.677951],
+            navn: "Matrikel nr.4 & 7 , Butzberg",
+            nabolag: "East End A",
+            ejer: "the Heirs of John Bengger Esqr. Decased",
+            image: 'east_end_a_distrikt/point4/129.png', 
+            csvLink: 'east_end_a_distrikt/point4/point4_129_1.csv'
+        },
+
+        {
+            coordinates: [17.7517, -64.676621],
+            navn: "Matrikel nr.6 , Roberto Hill Estate",
+            nabolag: "East End A",
+            ejer: "Heirs of John Bengger Esqr deceased",
+            image: 'east_end_a_distrikt/point6/132.png', 
+            csvLink: 'east_end_a_distrikt/point6/point6_132_1.csv'
+        },
+
+        {
+            coordinates: [17.752497, -64.664412],
+            navn: "Matrikel nr.9 , Mr. Robstoff Estate",
+            nabolag: "East End A",
+            ejer: "Mrs. Mary Burke",
+            image: 'east_end_a_distrikt/point9/133.png', 
+            csvLink: 'east_end_a_distrikt/point9/point9_133_1.csv'
+        },
+
+        {
+            coordinates: [17.75689, -64.64982],
+            navn: "Matrikel nr.13 , Grön Kay",
+            nabolag: "East End A",
+            ejer: " James E. Bladwell & Jacob L Muller",
+            image: ['east_end_a_distrikt/point13/137.png',
+                    'east_end_a_distrikt/point13/138.png'],
+            csvLink: ['east_end_a_distrikt/point13/point13_137_1.csv',
+                'east_end_a_distrikt/point13/point13_138_1.csv']
+        },
+
+        {
+            coordinates: [17.74655, -64.645936],
+            navn: "Matrikel nr.16 , Seven Hills",
+            nabolag: "East End A",
+            ejer: "William Richardson Jun",
+            image: 'east_end_a_distrikt/point16/139.png', 
+            csvLink: 'east_end_a_distrikt/point16/point16_139_1.csv'
+        },
+
+        {
+            coordinates: [17.745773, -64.657416],
+            navn: "Matrikel nr.19 , All for the Better Estate",
+            nabolag: "East End A",
+            ejer: "Elizabeth Rogie",
+            image: 'east_end_a_distrikt/point19/141.png', 
+            csvLink: 'east_end_a_distrikt/point19/point19_141_1.csv'
+        },
+
+        {
+            coordinates: [17.741727, -64.667115],
+            navn: "Matrikel nr.21 , Eundracht/Industry Estate",
+            nabolag: "East End A",
+            ejer: " Geo Striediron & John Pawe ",
+            image: ['east_end_a_distrikt/point21/143.png',
+                    'east_end_a_distrikt/point21/145.png'],
+            csvLink: ['east_end_a_distrikt/point21/point21_143_1.csv',
+                'east_end_a_distrikt/point21/point21_145_1.csv']
+        },
+
+        {
+            coordinates: [17.739765, -64.672608],
+            navn: "Matrikel nr.22 , Lowrys Hill",
+            nabolag: "East End A",
+            ejer: "John Stridiron",
+            image: 'east_end_a_distrikt/point22/146.png',
+            csvLink: 'east_end_a_distrikt/point22/point22_146_1.csv'
+        },
+
+        {
+            coordinates: [17.736556, -64.678466],
+            navn: "Matrikel nr.24 , Salmon Hill",
+            nabolag: "East End A",
+            ejer: "John Salmon Hunt",
+            image: 'east_end_a_distrikt/point24/150.png',
+            csvLink: 'east_end_a_distrikt/point24/point24_150_1.csv'
+        },
+
+
+        {
+            coordinates: [17.728635, -64.681234],
+            navn: "Matrikel nr.26 , La Presvalais",
+            nabolag: "East End A",
+            ejer: "John Ryan Esquire",
+            image: 'east_end_a_distrikt/point26/153.png',
+            csvLink: 'east_end_a_distrikt/point26/point26_153_1.csv'
+        },
+
+        {
+            coordinates: [17.724874, -64.685698],
+            navn: "Matrikel nr.27 , Münster",
+            nabolag: "East End A",
+            ejer: "Samuel Dewindt",
+            image: 'east_end_a_distrikt/point27/154.png',
+            csvLink: 'east_end_a_distrikt/point27/point27_154_1.csv'
+        },
+
+        {
+            coordinates: [17.725008, -64.67411],
+            navn: "Matrikel nr.28 , Prospect Hill",
+            nabolag: "East End A",
+            ejer: "Seth & Thos Smith",
+            image: 'east_end_a_distrikt/point28/155.png',
+            csvLink: 'east_end_a_distrikt/point28/point28_155_1.csv'
+        },
+
+        {
+            coordinates: [17.732387, -64.670119],
+            navn: "Matrikel nr.30, Petronella",
+            nabolag: "East End A",
+            ejer: "Henry Strideron",
+            image: ['east_end_a_distrikt/point30/156.png',
+                    'east_end_a_distrikt/point30/159.png'],
+            csvLink: ['east_end_a_distrikt/point30/point30_156_1.csv',
+                    'east_end_a_distrikt/point30/point30_159_1.csv']
+        },
+
+        {
+            coordinates: [17.73396, -64.664798],
+            navn: "Matrikel nr.31",
+            nabolag: "East End A",
+            ejer: "Mrs. Sarah Bechman",
+            image: 'east_end_a_distrikt/point31/161.png',
+            csvLink: 'east_end_a_distrikt/point31/point31_161_1.csv'
+        },
+
+        {
+            coordinates: [17.736122, -64.636637],
+            navn: "Matrikel nr.35, Cotton Grove",
+            nabolag: "East End A",
+            ejer: "Anthoony Behagere Esqr",
+            image: 'east_end_a_distrikt/point35/163.png',
+            csvLink: 'east_end_a_distrikt/point35/point35_163_1.csv'
+        },
+        {
+            coordinates: [17.717384, -64.665141],
+            navn: "Matrikel nr.39 b, Fareham",
+            nabolag: "East End A",
+            ejer: "John Goodchild",
+            image: 'east_end_a_distrikt/point39/166.png',
+            csvLink: 'east_end_a_distrikt/point39/point39_166_1.csv'
+        },
+        {
+            coordinates: [17.72266, -64.670146],
+            navn: "Matrikel nr.40, Petronella",
+            nabolag: "East End A",
+            ejer: "Thos. Stridiron",
+            image: 'east_end_a_distrikt/point40/160.png',
+            csvLink: 'east_end_a_distrikt/point40/point40_160_1.csv'
+        },
+
+        {
+            coordinates: [17.721717, -64.678788],
+            navn: "Matrikel nr.41, Castle Nugent",
+            nabolag: "East End A",
+            ejer: "George L Goodchild",
+            image: 'east_end_a_distrikt/point41/165.png',
+            csvLink: 'east_end_a_distrikt/point41/point41_165_1.csv'
+        },
+
+
+        {
+            coordinates: [17.716281, -64.683337],
+            navn: "Matrikel nr.42, Spring Estate",
+            nabolag: "East End A",
+            ejer: "George Mardenbrough",
+            image: 'east_end_a_distrikt/point42/169.png',
+            csvLink: 'east_end_a_distrikt/point42/point42_169_1.csv'
+        },
+
+        {
+            coordinates: [17.756236, -64.679861],
+            navn: "Matrikel nr.44",
+            nabolag: "East End A",
+            ejer: "William Richards",
+            image: 'east_end_a_distrikt/point44/171.png',
+            csvLink: 'east_end_a_distrikt/point44/point44_171_1.csv'
+        },
+
+        {
+            coordinates: [17.752885, -64.671664],
+            navn: "Matrikel nr.45, Annas Hope",
+            nabolag: "East End A",
+            ejer: "Richard Forster Esquire",
+            image: 'east_end_a_distrikt/point45/172.png',
+            csvLink: 'east_end_a_distrikt/point45/point45_172_1.csv'
+        },
+        {
+            coordinates: [17.752394, -64.658446
+            ],
+            navn: "Matrikel nr.50",
+            nabolag: "East End A",
+            ejer: "James Eivers",
+            image: 'east_end_a_distrikt/point50/176.png',
+            csvLink: 'east_end_a_distrikt/point50/point50_176_1.csv'
+        },
+        {
+            coordinates: [17.725785, -64.661686],
+            navn: "Matrikel nr.54",
+            nabolag: "East End A",
+            ejer: "Isaac Hartman",
+            image: 'east_end_a_distrikt/point54/162.png',
+            csvLink: 'east_end_a_distrikt/point54/point54_162_1.csv'
+        },
+
+ // Kompagniets Kvarter
+        {
+            coordinates: [17.750487, -64.721364],
+            navn: "Matrikel nr. 4, Golden Rock ",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "James Forbes",
+            image: ['kompagniets_distrikt/point4/9.png',
+                    'kompagniets_distrikt/point4/10.png'],
+            csvLink: ['kompagniets_distrikt/point4/point4_9_2.csv',
+                    'kompagniets_distrikt/point4/point4_10_2.csv']
+        },
+
+        {
+            coordinates: [17.75699, -64.724864],
+            navn: "Matrikel nr. 5 & 13, Little Princes",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Alex J. Garret",
+            image: 'kompagniets_distrikt/point5/4.png',
+            csvLink: 'kompagniets_distrikt/point5/point5_4_2.csv'
+        },
+
+
+        {
+            coordinates: [17.738825, -64.722948],
+            navn: "Matrikel nr. 6, Beeston hill",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "George Park",
+            image: ['kompagniets_distrikt/point6/6.png',
+                    'kompagniets_distrikt/point6/7.png'],
+            csvLink: ['kompagniets_distrikt/point6/point6_6_2.csv',
+                    'kompagniets_distrikt/point6/point6_7_2.csv']
+        },
+
+        
+
+        {   coordinates: [17.729668, -64.728312],
+            navn: "Matrikel nr. 8 & 36, Estate Anna Houp",
+            nabolag: "Kompagniets Kvarter & Dronningens Kvarter",
+            ejer: "the heirs of C De Nully Deceased",
+            image: 'kompagniets_distrikt/point8/12.png',
+            csvLink: 'kompagniets_distrikt/point8/point8_12_2.csv'
+        },
+
+        {
+            coordinates: [17.731446, -64.722948],
+            navn: "Matrikel nr. 9, The Grange",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Henry Seaton",
+            image: ['kompagniets_distrikt/point9/15.png',
+                    'kompagniets_distrikt/point9/16.png'],
+            csvLink: ['kompagniets_distrikt/point9/point9_15_2.csv',
+                    'Kompagniets_distrikt/point9/point9_16_2.csv']
+        },
+
+
+        {   coordinates: [17.737816, -64.714146],
+            navn: "Matrikel nr. 10, Hermon Hill",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Mistress M. Rengger",
+            image: 'kompagniets_distrikt/point10/19.png',
+            csvLink: 'kompagniets_distrikt/point10/point10_19_2.csv'
+        },
+
+        {
+            coordinates: [17.725249, -64.711715],
+            navn: "Matrikel nr. 12, 14, 20 & 21, Catharianas Reest",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Heirs of C: De Nully",
+            image: 'kompagniets_distrikt/point12/21.png',
+            csvLink: 'kompagniets_distrikt/point12/point12_21_2.csv'
+        },
+        {
+            coordinates: [17.712029, -64.722862],
+            navn: "Matrikel nr. 16",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Friederich Baron de Bretton",
+            image: 'kompagniets_distrikt/point16/23.png',
+            csvLink: 'kompagniets_distrikt/point16/point16_23_2.csv'
+        },
+
+        {
+            coordinates: [17.715381, -64.715266],
+            navn: "Matrikel nr. 17, Granard",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Mich M: Evoy Esqr",
+            image: ['kompagniets_distrikt/point17/25.png',
+                    'kompagniets_distrikt/point17/26.png',
+                    'kompagniets_distrikt/point17/27.png',
+                    'kompagniets_distrikt/point17/28.png',
+                    'kompagniets_distrikt/point17/29.png',
+                    'kompagniets_distrikt/point17/30.png',
+                    'kompagniets_distrikt/point17/32.png'],
+          csvLink: ['kompagniets_distrikt/point17/point17_25_2.csv',
+                    'kompagniets_distrikt/point17/point17_26_2.csv',
+                    'kompagniets_distrikt/point17/point17_27_2.csv',
+                    'kompagniets_distrikt/point17/point17_28_2.csv',
+                    'kompagniets_distrikt/point17/point17_29_2.csv',
+                    'kompagniets_distrikt/point17/point17_30_2.csv',
+                    'kompagniets_distrikt/point17/point17_32_2.csv'],
+        },
+
+        {
+            coordinates: [17.727257, -64.705954],
+            navn: "Matrikel nr. 20, Bugby Hote",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Peter C. Dewint Esqr",
+            image: 'kompagniets_distrikt/point20/33.png',
+            csvLink: 'kompagniets_distrikt/point20/point20_33_2.csv'
+        },
+
+
+        {
+            coordinates: [17.726582, -64.70016],
+            navn: "Matrikel nr. 21",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Mary Key",
+            image: 'kompagniets_distrikt/point21/40.png',
+            csvLink: 'kompagniets_distrikt/point21/point21_40_2.csv'
+        },
+        {
+            coordinates: [17.729893, -64.692371],
+            navn: "Matrikel nr. 23, Spring Garden",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Heirs of John & Elizabeth Boakley",
+            image: 'kompagniets_distrikt/point23/34.png',
+            csvLink: 'kompagniets_distrikt/point23/point23_34_2.csv'
+        },
+
+        {
+            coordinates: [17.736735, -64.697253],
+            navn: "Matrikel nr. 24, Rezmvery",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Bart Fleldher",
+            image: 'kompagniets_distrikt/point24/36.png',
+            csvLink: 'kompagniets_distrikt/point24/point24_36_2.csv'
+        },
+
+        {
+            coordinates: [17.708268, -64.714773],
+            navn: "Matrikel nr. 31, Diamond Estate",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Gen C. Lindemann",
+            image: 'kompagniets_distrikt/point31/39.png',
+            csvLink: 'kompagniets_distrikt/point31/point31_39_2.csv'
+        },
+        {
+            coordinates: [17.745058, -64.732518],
+            navn: "Matrikel nr. 35, Bellevue Estate",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Mrs. Anna Linberg",
+            image: 'kompagniets_distrikt/point35/43.png',
+            csvLink: 'kompagniets_distrikt/point35/point35_43_2.csv'
+        },
+
+        {
+            coordinates: [17.757483, -64.733484],
+            navn: "La grande Princess",
+            nabolag: "Kompagniets Kvarter",
+            ejer: "Heirs of count Schimmelmann, Ganthia Abramsen, Spindler, Marcus Costella, Julian Maria de Nelly",
+            image: ['kompagniets_distrikt/pointprinsessen/51.png',
+                    'kompagniets_distrikt/pointprinsessen/52.png',
+                    'kompagniets_distrikt/pointprinsessen/53.png',
+                    'kompagniets_distrikt/pointprinsessen/54.png',
+                    'kompagniets_distrikt/pointprinsessen/55.png'],
+          csvLink: ['kompagniets_distrikt/pointprinsessen/point_51_2.csv',
+                    'kompagniets_distrikt/pointprinsessen/point_52_2.csv',
+                    'kompagniets_distrikt/pointprinsessen/point_53_2.csv',
+                    'kompagniets_distrikt/pointprinsessen/point_54_2.csv',
+                    'kompagniets_distrikt/pointprinsessen/point_55_2.csv',],
+        },
+
+
+
+
+
+      // Kongens_distrikt
+      {
+        coordinates: [17.759179, -64.782107],
+        navn: "Matrikel nr. 1",
+        nabolag: "Kongens Kvarter",
+        ejer: "Faughney Ferrall",
+        image: 'kongens_distrikt/point1/142.png',
+        csvLink: 'kongens_distrikt/point1/point1_142_2.csv'
+    },
+
+    {
+                coordinates: [17.75078, -64.793072],
+                navn: "Matrikel nr. 3, Fountaine Estate",
+                nabolag: "Kongens Kvarter",
+                ejer: "Anna Elizabeth Rogires",
+                image: [
+                    'kongens_distrikt/point3/144.png',
+                    'kongens_distrikt/point3/145.png'
+                ],
+                csvLink: [
+                    'kongens_distrikt/point3/point3_144_2.csv',
+                    'kongens_distrikt/point3/point3_145_2.csv']
+            },
+
+
+            {
+                coordinates: [17.742871, -64.802663],
+                navn: "Matrikel nr. 6 & 7, Mount Pleasent",
+                nabolag: "Kongens Kvarter",
+                ejer: "William Colhoun Esqr",
+                image: 'kongens_distrikt/point6/152.png',
+                csvLink: 'kongens_distrikt/point6/point6_152_2.csv'
+            },
+
+
+            {
+                coordinates: [17.730983, -64.778972],
+                navn: "Matrikel nr. 11 & 19, The Slob",
+                nabolag: "Kongens Kvarter",
+                ejer: "Mrs. Sarah Beckman",
+                image: 'kongens_distrikt/point11/171.png',
+                csvLink: 'kongens_distrikt/point11/point11_171_2.csv'
+            },
+
+
+            {
+                coordinates: [17.735616, -64.786441],
+                navn: "Matrikel nr. 12 & 13, Fredensborg",
+                nabolag: "Kongens Kvarter",
+                ejer: "Heyliger",
+                image: [
+                    'kongens_distrikt/point12/160.png',
+                    'kongens_distrikt/point12/161.png'
+                ],
+                csvLink: [
+                    'kongens_distrikt/point12/point12_160_2.csv',
+                    'kongens_distrikt/point12/point12_161_2.csv'
+                ]
+            },
+
+
+            {
+        coordinates: [17.732559, -64.794488],
+        navn: "Matrikel nr. 14, Bethlehem Estate old works",
+        nabolag: "Kongens Kvarter",
+        ejer: "the Heirs of John jr. Dewint Esqr",
+        image: 'kongens_distrikt/point14/164.png',
+        csvLink: 'kongens_distrikt/point14/point14_164_2.csv'
+    },
+
+    {
+        coordinates: [17.730649, -64.792879],
+        navn: "Matrikel nr. 17, upper Bethlehem Estate",
+        nabolag: "Kongens Kvarter",
+        ejer: "M.M Heyliger",
+        image: 'kongens_distrikt/point17/167.png',
+        csvLink: 'kongens_distrikt/point17/point17_167_2.csv'
+    },
+
+      {
+                coordinates: [17.735187, -64.773395],
+                navn: "Matrikel nr. 20, La Reine",
+                nabolag: "Kongens Kvarter",
+                ejer: "John Ryan Esquire",
+                image: [
+                    'kongens_distrikt/point20/172.png',
+                    'kongens_distrikt/point20/175.png'
+                ],
+                csvLink: [
+                    'kongens_distrikt/point20/point20_172_2.csv',
+                    'kongens_distrikt/point20/point20_175_2.csv'
+                ]
+            },
+    {
+        coordinates: [17.724395, -64.776657],
+        navn: "Matrikel nr. 22, Clifton Hill",
+        nabolag: "Kongens Kvarter",
+        ejer: "Edward Murphy",
+        image: 'kongens_distrikt/point22/183.png',
+        csvLink: 'kongens_distrikt/point22/point22_183_2.csv'
+    },
+    
+
+            {
+                coordinates: [17.715688, -64.783995],
+                navn: "Matrikel nr. 27, Prapft",
+                nabolag: "Kongens Kvarter",
+                ejer: "Raapzaat Heyliger",
+                image: 'kongens_distrikt/point27/185.png',
+                csvLink: 'kongens_distrikt/point27/point27_185_2.csv'
+            },
+
+{
+        coordinates: [17.718549, -64.779553],
+        navn: "Matrikel nr. 28",
+        nabolag: "Kongens Kvarter",
+        ejer: "John G. Krause",
+        image: [
+                    'kongens_distrikt/point28/188.png',
+                    'kongens_distrikt/point28/189.png'
+                ],
+                csvLink: [
+                    'kongens_distrikt/point28/point28_188_2.csv',
+                    'kongens_distrikt/point28/point28_189_2.csv'
+                ]
+            },
+                        {
+        coordinates: [17.715545, -64.774039],
+        navn: "Matrikel nr. 29, Spanish Town",
+        nabolag: "Kongens Kvarter",
+        ejer: "Abrame Markoe Senior",
+        image: [
+                    'kongens_distrikt/point29/190.png',
+                    'kongens_distrikt/point29/191.png'
+                ],
+                csvLink: [
+                    'kongens_distrikt/point29/point_29_190_2.csv',
+                    'kongens_distrikt/point29/point29_191_2.csv'
+                ]
+            },
+            {
+        coordinates: [17.713705, -64.765391],
+        navn: "Matrikel nr. 30 & 31, the estate Blessing",
+        nabolag: "Kongens Kvarter",
+        ejer: "Joe Johnson",
+        image: [
+                    'kongens_distrikt/point30/192.png',
+                    'kongens_distrikt/point30/196.png'
+                ],
+                csvLink: [
+                    'kongens_distrikt/point30/point30_192_2.csv',
+                    'kongens_distrikt/point30/point30_196_2.csv'
+                ]
+            },
+
+
+            {
+                coordinates: [17.710373, -64.771013],
+                navn: "Matrikel nr. 32, Bull's plantage / Caraman hall",
+                nabolag: "Kongens Kvarter",
+                ejer: "John P. H Robinson",
+                image: 'kongens_distrikt/point32/202.png',
+                csvLink: 'kongens_distrikt/point32/point32_202_2.csv'
+            },
+
+
+
+    {
+        coordinates: [17.707103, -64.780154],
+        navn: "Matrikel nr. 32 & 33, Anguilla Estate",
+        nabolag: "Kongens Kvarter",
+        ejer: "Mary Turnbull",
+        image: [
+                    'kongens_distrikt/point32a/198.png',
+                    'kongens_distrikt/point32a/199.png'
+                ],
+                csvLink: [
+                    'kongens_distrikt/point32a/point32_198_2.csv',
+                    'kongens_distrikt/point32a/point32_199_2.csv'
+                ]
+            },
+   {
+        coordinates: [17.708113, -64.781656],
+        navn: "Matrikel nr. 33 A, Bethlehem Estate",
+        nabolag: "Kongens Kvarter",
+        ejer: "Junior Jeb Dewind Esqr",
+        image: 'kongens_distrikt/point33a/204.png',
+        csvLink: 'kongens_distrikt/point33a/point33_204_2.csv'
+    },
+
+    {
+        coordinates: [17.700234, -64.782364],
+        navn: "Matrikel nr. 33, Farplane",
+        nabolag: "Kongens Kvarter",
+        ejer: "James Henderson",
+        image: 'kongens_distrikt/point33/206.png',
+        csvLink: 'kongens_distrikt/point33/point33_206_2.csv'
+    },
+    // North_Side_A_distrikt
+    
+    {
+        coordinates: [17.735216, -64.888558],
+        navn: "Matrikel nr. 1, The William",
+        nabolag: "North side A",
+        ejer: "the Heirs of Isaac Markoe Deceaced",
+        image: 'north_side_a_distrikt/point1/66.png',
+        csvLink: 'north_side_a_distrikt/point1/point1_66_2.csv',
+    },
+    
+    
+    
+    {
+        coordinates: [17.737905, -64.870448],
+        navn: "Matrikel nr. 4, Amally/Moat Estate/punch",
+        nabolag: "North side A",
+        ejer: "Heirs of Roger Ferrall",
+        image: [
+            'north_side_a_distrikt/point4/68.png',
+            'north_side_a_distrikt/point4/71.png',
+            'north_side_a_distrikt/point4/72.png'
+        ],
+        csvLink: [
+            'north_side_a_distrikt/point4/point4_68_2.csv',
+            'north_side_a_distrikt/point4/point4_71_2.csv',
+            'north_side_a_distrikt/point4/point4_72_2.csv'
+        ],
+    },
+    {
+        coordinates: [17.745221, -64.853153],
+        navn: "Matrikel nr. 7",
+        nabolag: "North side A",
+        ejer: "John Quin",
+        image: 'north_side_a_distrikt/point7/73.png',
+        csvLink: 'north_side_a_distrikt/point7/point7_73_2.csv',
+    },
+    {
+        coordinates: [17.748599, -64.831685],
+        navn: "Matrikel nr. 11, Fountain Estate",
+        nabolag: "North side A",
+        ejer: "Thomas Gieses Esquire",
+        image: [
+            'north_side_a_distrikt/point11/77.png',
+            'north_side_a_distrikt/point11/78.png'
+        ],
+        csvLink: [
+            'north_side_a_distrikt/point11/point11_77_2.csv',
+            'north_side_a_distrikt/point11/point11_78_2.csv'
+        ]
+    },
+    {
+        coordinates: [17.74097, -64.890726],
+        navn: "Matrikel nr. 12, Spratt Hall",
+        nabolag: "North side A",
+        ejer: "George Gordon",
+        image: [
+            'north_side_a_distrikt/point12/82.png',
+            'north_side_a_distrikt/point12/83.png'
+        ],
+        csvLink: [
+            'north_side_a_distrikt/point12/point12_82_2.csv',
+            'north_side_a_distrikt/point12/point12_83_2.csv'
+        ]
+    },
+    
+
+            {
+        coordinates: [17.748409, -64.874461],
+        navn: "Matrikel nr. 15, North Hall",
+        nabolag: "North side A",
+        ejer: "James Codwise",
+        image: [
+            'north_side_a_distrikt/point15/87.png',
+            'north_side_a_distrikt/point15/88.png'
+        ],
+        csvLink: [
+            'north_side_a_distrikt/point15/point15_87_2.csv',
+            'north_side_a_distrikt/point15/point15_88_2.csv'
+        ]
+    },
+    
+           
+            {
+        coordinates: [17.749533, -64.868431],
+        navn: "Matrikel nr. 16, Mt. Stewart",
+        nabolag: "North side A",
+        ejer: "James Codwise & Jacob Constable",
+        image: [
+            'north_side_a_distrikt/point16/92.png',
+            'north_side_a_distrikt/point16/93.png',
+            'north_side_a_distrikt/point16/96.png'
+        ],
+        csvLink: [
+            'north_side_a_distrikt/point16/point16_92_2.csv',
+            'north_side_a_distrikt/point16/point16_93_2.csv',
+            'north_side_a_distrikt/point16/point16_96_2.csv'
+        ],
+    },
+    {
+        coordinates: [17.74933, -64.86036],
+        navn: "Matrikel nr. 17, Rose Hill Estate",
+        nabolag: "North side A",
+        ejer: "Seth & Thomas Smith",
+        image: [
+            'north_side_a_distrikt/point17/99.png',
+            'north_side_a_distrikt/point17/100.png',
+            'north_side_a_distrikt/point17/102.png',
+            'north_side_a_distrikt/point17/103.png',
+            'north_side_a_distrikt/point17/106.png'
+        ],
+        csvLink: [
+            'north_side_a_distrikt/point17/point17_99_2.csv',
+            'north_side_a_distrikt/point17/point17_100_2.csv',
+            'north_side_a_distrikt/point17/point17_102_2.csv',
+            'north_side_a_distrikt/point17/point17_103_2.csv',
+            'north_side_a_distrikt/point17/point17_106_2.csv'
+        ]
+    },
+    {
+        coordinates: [17.757949, -64.83868],
+        navn: "Matrikel nr. 21, Sweeet bottom",
+        nabolag: "North side A",
+        ejer: "the heirs of Rowland Davies decd",
+        image: 'north_side_a_distrikt/point21/110.png',
+        csvLink: 'north_side_a_distrikt/point21/point21_110_2.csv'
+    },
+    {
+        coordinates: [17.758362, -64.834292],
+        navn: "Matrikel nr. 22",
+        nabolag: "North side A",
+        ejer: "the Heirs of William Rogers Dee",
+        image: 'north_side_a_distrikt/point22/130.png',
+        csvLink: 'north_side_a_distrikt/point22/point22_130_2.csv'
+    },
+    {
+        coordinates: [17.746427, -64.89094],
+        navn: "Matrikel nr. 23",
+        nabolag: "North side A",
+        ejer: "John Sempill & James fraser",
+        image: [
+            'north_side_a_distrikt/point23/113.png',
+            'north_side_a_distrikt/point23/115.png'
+        ],
+        csvLink: [
+            'north_side_a_distrikt/point23/point23_113_2.csv',
+            'north_side_a_distrikt/point23/point23_115_2.csv'
+        ]
+    },
+    {
+        coordinates: [17.751332, -64.882357],
+        navn: "Matrikel nr. 24, Mount Washington & Butlers bay",
+        nabolag: "North side A",
+        ejer: "John Sempill, Cornelius Durant ",
+        image: [
+            'north_side_a_distrikt/point24/118.png',
+            'north_side_a_distrikt/point24/121.png'
+        ],
+        csvLink: [
+            'north_side_a_distrikt/point24/point24_118_2.csv',
+            'north_side_a_distrikt/point24/point24_121_2.csv'
+        ]
+    },
+    {
+        coordinates: [17.752633, -64.876107],
+        navn: "Matrikel nr. 25, Nicholas",
+        nabolag: "North side A",
+        ejer: "the Heirs Patrick Ferrall",
+        image: 'north_side_a_distrikt/point25/123.png',
+        csvLink: 'north_side_a_distrikt/point25/point25_123_2.csv'
+    },
+    {
+        coordinates: [17.756824, -64.86796],
+        navn: "Matrikel nr. 26, Spring Garden",
+        nabolag: "North side A",
+        ejer: "Thomas Nugent Armstrong & E.H Hood",
+        image: [
+            'north_side_a_distrikt/point26/125.png',
+            'north_side_a_distrikt/point26/126.png'
+        ],
+        csvLink: [
+            'north_side_a_distrikt/point26/point26_125_2.csv',
+            'north_side_a_distrikt/point26/point26_126_2.csv'
+        ]
+    },
+    {
+        coordinates: [17.75873, -64.872465],
+        navn: "Matrikel nr. 36, Caledonia",
+        nabolag: "North side A",
+        ejer: "Hans Major Adam Söbötken",
+        image: [
+            'north_side_a_distrikt/point36/132.png',
+            'north_side_a_distrikt/point36/133.png'
+        ],
+        csvLink: [
+            'north_side_a_distrikt/point36/point36_132_2.csv',
+            'north_side_a_distrikt/point36/point36_133_2.csv'
+        ]
+    },
+    {
+        coordinates: [17.758112, -64.884728],
+        navn: "Matrikel nr. 37, North Side",
+        nabolag: "North side A",
+        ejer: "John Conners",
+        image: 'north_side_a_distrikt/point37/137.png',
+        csvLink: 'north_side_a_distrikt/point37/point37_137_2.csv'
+    },
+
+    // Northside B Kvarter
+
+     {
+        coordinates: [17.776507, -64.747624],
+        navn: "Matrikel nr. 1 , Judiths Fancy",
+        nabolag: "North Side B",
+        ejer: "Lucus & Peter debreton",
+        image: 'north_side_b_distrikt/point1/277.png',
+        csvLink: 'north_side_b_distrikt/point1/point1_277_1.csv'
+    },
+
+    {
+        coordinates: [17.774592, -64.788126],
+        navn: "Matrikel nr. 5 , Rust on Trust",
+        nabolag: "North Side B",
+        ejer: "John & Olivia Richardson, Lucas Gibbs Esqr",
+        image: [
+            'north_side_b_distrikt/point5/273.png',
+            'north_side_b_distrikt/point5/276.png'
+        ],
+        csvLink: [
+            'north_side_b_distrikt/point5/point5_273_1.csv',
+            'north_side_b_distrikt/point5/point5_276_1.csv'
+        ],
+    },
+
+    {
+        coordinates: [17.769948, -64.780519],
+        navn: "Matrikel nr. 8 , Clearmont",
+        nabolag: "North Side B",
+        ejer: "Joseph B Chabat Esqr.",
+        image: 'north_side_b_distrikt/point8/271.png',
+        csvLink: 'north_side_b_distrikt/point8/point8_271_1.csv'
+    },
+
+    {
+        coordinates: [17.761877, -64.790175],
+        navn: "Matrikel nr. 11 , Mount Pleasant",
+        nabolag: "North Side B",
+        ejer: "Peter Appleby",
+        image: 'north_side_b_distrikt/point11/279.png',
+        csvLink: 'north_side_b_distrikt/point11/point11_279_1.csv'
+    },
+
+    {
+        coordinates: [17.761938, -64.796419],
+        navn: "Matrikel nr. 12, Betsys Iewall ",
+        nabolag: "North Side B",
+        ejer: "Antoney Baudhuy",
+        image: 'north_side_b_distrikt/point12/281.png',
+        csvLink: 'north_side_b_distrikt/point12/point12_281_1.csv'
+    },
+
+    {
+        coordinates: [17.75875, -64.801419],
+        navn: "Matrikel nr. 13 , Canaan",
+        nabolag: "North Side B",
+        ejer: "G. S. Gÿllich",
+        image: ['north_side_b_distrikt/point13/283.png',
+                'north_side_b_distrikt/point13/284.png'],
+        csvLink: ['north_side_b_distrikt/point13/point13_283_1.csv',
+                  'north_side_b_distrikt/point13/point13_284_1.csv'],
+    },
+
+    {
+        coordinates: [17.755609, -64.807609],
+        navn: "Matrikel nr. 14 , Mount Eagle Estate",
+        nabolag: "North Side B",
+        ejer: "Sam Newton",
+        image: ['north_side_b_distrikt/point14/288.png',
+                'north_side_b_distrikt/point14/289.png'],
+        csvLink: ['north_side_b_distrikt/point14/point14_288_1.csv',
+                  'north_side_b_distrikt/point14/point14_289_1.csv'],
+    },
+
+    {
+        coordinates: [17.754275, -64.819465],
+        navn: "Matrikel nr. 16 , Parasol",
+        nabolag: "North Side B",
+        ejer: "Thomas Giese",
+        image: ['north_side_b_distrikt/point16/293.png',
+                'north_side_b_distrikt/point16/294.png'],
+        csvLink: ['north_side_b_distrikt/point16/point16_293_1.csv',
+                  'north_side_b_distrikt/point16/point16_294_1.csv'],
+    },
+
+    {
+        coordinates: [17.75969, -64.828155],
+        navn: "Matrikel nr. 18 , Prosperity",
+        nabolag: "North Side B",
+        ejer: "Thomas, Peter: & Math: Armstrong",
+        image: ['north_side_b_distrikt/point18/298.png',
+                'north_side_b_distrikt/point18/299.png'],
+        csvLink: ['north_side_b_distrikt/point18/point18_298_1.csv',
+                  'north_side_b_distrikt/point18/point18_299_1.csv'],
+    },
+
+    {
+        coordinates: [17.766004, -64.821439],
+        navn: "Matrikel nr. 19 , North Star",
+        nabolag: "North Side B",
+        ejer: "John Allen",
+        image: ['north_side_b_distrikt/point19/303.png',
+                'north_side_b_distrikt/point19/304.png',
+                 'north_side_b_distrikt/point19/305.png'],
+        csvLink: ['north_side_b_distrikt/point19/point19_303_1.csv',
+                  'north_side_b_distrikt/point19/point19_304_1.csv',
+                  'north_side_b_distrikt/point19/point19_305_1.csv'],
+    },
+
+
+    {
+        coordinates: [17.767557, -64.804552],
+        navn: "Matrikel nr. 22 , Belvedere",
+        nabolag: "North Side B",
+        ejer: "Lieut Lars Olsen & John Rutlidger",
+        image: ['north_side_b_distrikt/point22/309.png',
+               'north_side_b_distrikt/point22/310.png',
+               'north_side_b_distrikt/point22/313.png'],
+        csvLink: ['north_side_b_distrikt/point22/point22_309_1.csv',
+                  'north_side_b_distrikt/point22/point22_310_1.csv',
+                  'north_side_b_distrikt/point22/point22_313_1.csv']
+    },
+
+    {
+        coordinates: [17.773442, -64.803479],
+        navn: "Matrikel nr. 24 , La Valley",
+        nabolag: "North Side B",
+        ejer: "Isaac  Pikkering",
+        image: 'north_side_b_distrikt/point24/315.png',
+        csvLink: 'north_side_b_distrikt/point24/point24_315_1.csv'
+    },
+
+    {
+        coordinates: [17.771174, -64.814444],
+        navn: "Matrikel nr. 26 , Cane bay",
+        nabolag: "North Side B",
+        ejer: "Chå Williams",
+        image: 'north_side_b_distrikt/point26/318.png',
+        csvLink: 'north_side_b_distrikt/point26/point26_318_1.csv'
+    },
+
+
+    // Prinsens Kvarter
+    
+    {
+        coordinates: [17.741032, -64.83382],
+        navn: "Matrikel nr. 5, Hard Labour",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Gilbert Woodard",
+        image:'prinsens_distrikt/point5/179.png',
+        csvLink: 'prinsens_distrikt/point5/point5_179_1.csv'        
+    },
+
+    {
+        coordinates: [17.739049, -64.842274],
+        navn: "Matrikel nr. 6, Mount Pillier Estate",
+        nabolag: "Prinsens Kvarter",
+        ejer: " The Heirs of Peter Penting",
+        image:['prinsens_distrikt/point6/180.png',
+                'prinsens_distrikt/point6/180_1.png'],
+        csvLink: ['prinsens_distrikt/point6/point6_180_1.csv',
+                    'prinsens_distrikt/point6/point6_180_1_1.csv'],        
+    },
+
+    {
+        coordinates: [17.73674, -64.844549],
+        navn: "Matrikel nr. 7, Mount Pillier Estate",
+        nabolag: "Prinsens Kvarter",
+        ejer: "John O Ferrall Esqr",
+        image:'prinsens_distrikt/point7/182.png',
+        csvLink: 'prinsens_distrikt/point7/point7_182_1.csv'        
+    },
+
+    {
+        coordinates: [17.729627, -64.841888],
+        navn: "Matrikel nr. 10, Friendship Estate",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Henry Gosling",
+        image:'prinsens_distrikt/point10/184.png',
+        csvLink: 'prinsens_distrikt/point10/point10_184_1.csv'        
+    },
+
+    {
+        coordinates: [17.731467, -64.83618],
+        navn: "Matrikel nr. 11, Springfield Estate",
+        nabolag: "Prinsens Kvarter",
+        ejer: "William Bourke Esqr",
+        image:'prinsens_distrikt/point11/186.png',
+        csvLink: 'prinsens_distrikt/point11/point11_186_1.csv'        
+    },
+
+    {
+        coordinates: [17.738927, -64.81719],
+        navn: "Matrikel nr. 14, River Estate",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Sam Newton",
+        image: ['prinsens_distrikt/point14/188.png',
+                'prinsens_distrikt/point14/189.png'],
+        csvLink: ['prinsens_distrikt/point14/point14_188_1.csv',
+                    'prinsens_distrikt/point14/point14_189_1.csv']
+    },
+
+
+    {
+        coordinates: [17.736156, -64.805903],
+        navn: "Matrikel nr. 16 & 17, The Estate Jealousy",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Richard Forster",
+        image: ['prinsens_distrikt/point16/193.png',
+                'prinsens_distrikt/point16/194.png'],
+        csvLink: ['prinsens_distrikt/point16/point16_193_1.csv',
+                    'prinsens_distrikt/point16/point16_194_1.csv']
+    },
+
+
+
+    {
+        coordinates: [17.729984, -64.810452],
+        navn: "Matrikel nr. 18, Old love",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Martin Cuan & Michael Costello",
+        image: ['prinsens_distrikt/point18/200.png',
+                'prinsens_distrikt/point18/200.png'],
+        csvLink: ['prinsens_distrikt/point18/point18_200_1.csv',
+                    'prinsens_distrikt/point18/point18_201_1.csv']
+    },
+
+    {
+        coordinates: [17.727613, -64.816031],
+        navn: "Matrikel nr. 18 & 19, Upper old love",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Elizabeth Rogires",
+        image:'prinsens_distrikt/point19/198.png',
+        csvLink: 'prinsens_distrikt/point19/point19_198_1.csv'        
+    },
+
+
+    {
+        coordinates: [17.726173, -64.828026],
+        navn: "Matrikel nr. 21, Grove Place Estate",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Samuel Newton Esquire",
+        image: ['prinsens_distrikt/point21/202.png',
+                'prinsens_distrikt/point21/203.png'],
+        csvLink: ['prinsens_distrikt/point21/point21_202_1.csv',
+                    'prinsens_distrikt/point21/point21_203_1.csv']
+    },
+
+
+    {
+        coordinates: [17.722065, -64.839163],
+        navn: "Matrikel nr. 23, Hope Estate",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Peter Coppinger & A.P. Usher",
+        image: ['prinsens_distrikt/point23/205.png',
+                'prinsens_distrikt/point23/206.png'],
+        csvLink: ['prinsens_distrikt/point23/point23_205_1.csv',
+                    'prinsens_distrikt/point23/point23_206_1.csv']
+    },
+
+    {
+        coordinates: [17.720389, -64.844527],
+        navn: "Matrikel nr. 24, the Estate Walbergard",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Heires of Engelbert Herzeleberg Esqr",
+        image:'prinsens_distrikt/point24/208.png',
+        csvLink: 'prinsens_distrikt/point24/point24_208_1.csv'        
+    },
+
+    {
+        coordinates: [17.715647, -64.837575],
+        navn: "Matrikel nr. 26, The Mountain",
+        nabolag: "Prinsens Kvarter",
+        ejer: "The heirs of Richard Rors, William Rogers Senr & Henry Gosling ",
+        image: ['prinsens_distrikt/point26/211.png',
+                'prinsens_distrikt/point26/213.png',
+                'prinsens_distrikt/point26/214.png'],
+        csvLink: ['prinsens_distrikt/point26/point26_211_1.csv',
+                    'prinsens_distrikt/point26/point26_213_1.csv',
+                    'prinsens_distrikt/point26/point26_214_1.csv']
+    },
+
+
+    {
+        coordinates: [17.715554, -64.829764],
+        navn: "Matrikel nr. 27, St George",
+        nabolag: "Prinsens Kvarter",
+        ejer: "John Heyliger",
+        image:'prinsens_distrikt/point27/216.png',
+        csvLink: 'prinsens_distrikt/point27/point27_216_1.csv'        
+    },
+
+
+
+    {
+        coordinates: [17.722085, -64.818671],
+        navn: "Matrikel nr. 29, Plessen ",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Cornelius K. Hortright, Alexander Grant & Doctor Stadman",
+        image: ['prinsens_distrikt/point29/218.png',
+                'prinsens_distrikt/point29/220.png',
+                'prinsens_distrikt/point29/221.png'],
+        csvLink: ['prinsens_distrikt/point29/point29_218_1.csv',
+                    'prinsens_distrikt/point29/point29_220_1.csv',
+                    'prinsens_distrikt/point29/point29_221_1.csv']
+    },
+
+    {
+        coordinates: [17.722953, -64.811053],
+        navn: "Matrikel nr. 30 & 31, Lower Love",
+        nabolag: "Prinsens Kvarter",
+        ejer: "John Dewint Esqr and Count Rantzow",
+        image:'prinsens_distrikt/point30/222.png',
+        csvLink: 'prinsens_distrikt/point30/point30_222_1.csv'        
+    },
+
+    {
+        coordinates: [17.715361, -64.808393],
+        navn: "Matrikel nr. 34 & 35, Adventure",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Peter Coppinger Esqr",
+        image:'prinsens_distrikt/point34/229.png',
+        csvLink: 'prinsens_distrikt/point34/point34_229_1.csv'        
+    },
+
+    {
+        coordinates: [17.710455, -64.809122],
+        navn: "Matrikel nr. 35, Patience",
+        nabolag: "Prinsens Kvarter", 
+        ejer: "J. P. Gerald, Children of Free Women Margaret & Miss Susanna Marche ",
+        image: ['prinsens_distrikt/point35/231.png',
+                'prinsens_distrikt/point35/233.png',
+                'prinsens_distrikt/point35/234.png'],
+        csvLink: ['prinsens_distrikt/point35/point35_231_1.csv',
+                    'prinsens_distrikt/point35/point35_233_1.csv',
+                    'prinsens_distrikt/point35/point35_234_1.csv']
+    },
+
+    {
+        coordinates: [17.709903, -64.821739],
+        navn: "Matrikel nr. 37, Mount Pleasant Estate",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Cornelius H. Hortright",
+        image:'prinsens_distrikt/point37/235.png',
+        csvLink: 'prinsens_distrikt/point37/point37_235_1.csv'        
+    },
+
+    {
+        coordinates: [17.707859, -64.828155],
+        navn: "Matrikel nr. 38, Diamond",
+        nabolag: "Prinsens Kvarter", 
+        ejer: "Raapz Heyliger,Charles Gow & John Van Brakle",
+        image: ['prinsens_distrikt/point38/237.png',
+                'prinsens_distrikt/point38/239.png',
+                'prinsens_distrikt/point38/240.png'],
+        csvLink: ['prinsens_distrikt/point38/point38_237_1.csv',
+                    'prinsens_distrikt/point38/point38_239_1.csv',
+                    'prinsens_distrikt/point38/point38_240_1.csv']
+    },
+    {
+        coordinates: [17.704364, -64.838648],
+        navn: "Matrikel nr. 40, Water Ground",
+        nabolag: "Prinsens Kvarter",
+        ejer: " Richard Richardsons",
+        image:'prinsens_distrikt/point40/241.png',
+        csvLink: 'prinsens_distrikt/point40/point40_241_1.csv'        
+    },
+    {
+        coordinates: [17.69683, -64.83676],
+        navn: "Matrikel nr. 41, Williams Delight",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Seth & Thos Smith & Benjaman Gumbs",
+        image:['prinsens_distrikt/point41/243.png',
+               'prinsens_distrikt/point41/243Kopi.png'],
+        csvLink: 'prinsens_distrikt/point41/point41_243_1.csv'        
+    },
+
+    {
+        coordinates: [17.699233, -64.831052],
+        navn: "Matrikel nr. 42, Enfield Green Estate",
+        nabolag: "Prinsens Kvarter",
+        ejer: " Patrick Tenall & James Jordan",
+        image: ['prinsens_distrikt/point42/245.png',
+                'prinsens_distrikt/point42/247.png'],
+        csvLink: ['prinsens_distrikt/point42/point42_245_1.csv',
+                    'prinsens_distrikt/point42/point42_247_1.csv']
+    },
+
+    {
+        coordinates: [17.705692, -64.813285],
+        navn: "Matrikel nr. 44, 45 & 46, Paradise",
+        nabolag: "Prinsens Kvarter", 
+        ejer: "Charles Daly, Mary Daly & The Daly Family",
+        image: ['prinsens_distrikt/point44/248.png',
+                'prinsens_distrikt/point44/250.png',
+                'prinsens_distrikt/point44/251.png',
+                'prinsens_distrikt/point44/252.png'],
+        csvLink: ['prinsens_distrikt/point44/point44_248_1.csv',
+                    'prinsens_distrikt/point44/point44_250_1.csv',
+                    'prinsens_distrikt/point44/point44_251_1.csv',
+                    'prinsens_distrikt/point44/point44_252_1.csv']
+    },
+
+    {
+        coordinates: [17.707982, -64.80732],
+        navn: "Matrikel nr. 46, Fox",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Moses Titomb",
+        image:'prinsens_distrikt/point46/253.png',
+        csvLink: 'prinsens_distrikt/point46/point46_253_1.csv'        
+    },
+
+    {
+        coordinates: [17.702185, -64.795046],
+        navn: "Matrikel nr. 49",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Wm Manning Esqr",
+        image: ['prinsens_distrikt/point49/255.png',
+                'prinsens_distrikt/point49/256.png'],
+        csvLink: ['prinsens_distrikt/point49/point49_255_1.csv',
+                    'prinsens_distrikt/point49/point49_256_1.csv']
+    },
+
+    {
+        coordinates: [17.698653, -64.804149],
+        navn: "Matrikel nr. 51, Envy",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Mis. Elizabeth Maas",
+        image:'prinsens_distrikt/point51/260.png',
+        csvLink: 'prinsens_distrikt/point51/point51_260_1.csv'        
+    },
+
+    {
+        coordinates: [17.697549, -64.811644],
+        navn: "Matrikel nr. 52, Montpellier",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Alexander Cooper, Thomas Jones ",
+        image: ['prinsens_distrikt/point52/262.png',
+                'prinsens_distrikt/point52/264.png'],
+        csvLink: ['prinsens_distrikt/point52/point52_262_1.csv',
+                    'prinsens_distrikt/point52/point52_264_1.csv']
+    },
+
+    {
+        coordinates: [17.693305, -64.818971],
+        navn: "Matrikel nr. 53, Bettys Hope",
+        nabolag: "Prinsens Kvarter",
+        ejer: "Sam Thompson",
+        image:'prinsens_distrikt/point53/265.png',
+        csvLink: 'prinsens_distrikt/point53/point53_265_1.csv'        
+    },
+
+
+
+     // West_ End_distrikt
+     {  coordinates: [17.703248, -64.845428],
+        navn: "Matrikel nr. 1, Cane plantation",
+        nabolag: "West Ende Kvarter",
+        ejer: "Heirs of Maning Rogers Junr",
+        image: ['west_end_distrikt/point1/323.png',
+                'west_end_distrikt/point1/324.png'],
+        csvLink: ['west_end_distrikt/point1/point1_323_1.csv',
+                    'west_end_distrikt/point1/point1_324_1.csv']
+    },
+
+    {  coordinates: [17.700296, -64.850299],
+        navn: "Matrikel nr. 2, Cotton Estate",
+        nabolag: "West Ende Kvarter",
+        ejer: "Thomas Bradshaw Esqr",
+        image: ['west_end_distrikt/point2/328.png',
+                'west_end_distrikt/point2/329.png'],
+        csvLink: ['west_end_distrikt/point2/point2_328_1.csv',
+                    'west_end_distrikt/point2/point2_329_1.csv']
+    },
+
+    {
+        coordinates: [17.69725, -64.861522],
+        navn: "Matrikel nr. 4, Whim Estate",
+        nabolag: "West Ende Kvarter",
+        ejer: " Chr Mac Evoy Esqr",
+        image:'west_end_distrikt/point4/333.png',
+        csvLink: 'west_end_distrikt/point4/point4_333_1.csv'        
+    },
+
+    {  coordinates: [17.692128, -64.8668],
+        navn: "Matrikel nr. 5, 10 & 11 West End Estate",
+        nabolag: "West Ende Kvarter",
+        ejer: "Major Cornelius Henderichs Heires",
+        image: ['west_end_distrikt/point5/336.png',
+                'west_end_distrikt/point5/337.png'],
+        csvLink: ['west_end_distrikt/point5/point5_336_1.csv',
+                    'west_end_distrikt/point5/point5_337_1.csv']
+    },
+
+
+
+    {
+        coordinates: [17.740405, -64.865475],
+        navn: "Matrikel nr. 5 & 6, Oxford",
+        nabolag: "North Side Kvarter & West Ende Kvarter",
+        ejer: "Hannah Heyliger",
+        image:'west_end_distrikt/point5/70.png',
+        csvLink: 'west_end_distrikt/point5/point5_70_2.csv'        
+    },
+
+    {
+        coordinates: [17.695263, -64.873441],
+        navn: "Matrikel nr. 6, Little Plantation",
+        nabolag: "West Ende Kvarter",
+        ejer: "Hannah Heyliger",
+        image:'west_end_distrikt/point6/341.png',
+        csvLink: 'west_end_distrikt/point6/point6_341_1.csv'        
+    },
+
+    {  coordinates: [17.694731, -64.8796],
+        navn: "Matrikel nr. 7 & 22, Stoney Ground Estate",
+        nabolag: "West Ende Kvarter",
+        ejer: "John Hendrick Barnes Esqr",
+        image: ['west_end_distrikt/point7/343.png',
+                'west_end_distrikt/point7/344.png',
+                'west_end_distrikt/point7/348.png'],
+        csvLink: ['west_end_distrikt/point7/point7_343_1.csv',
+                    'west_end_distrikt/point7/point7_344_1.csv',
+                    'west_end_distrikt/point7/point7_348_1.csv']
+    },
+    {
+        coordinates: [17.689768, -64.858389],
+        navn: "Matrikel nr. 12, Hope Estate",
+        nabolag: "West Ende Kvarter",
+        ejer: " Robert Milles",
+        image:'west_end_distrikt/point12/349.png',
+        csvLink: 'west_end_distrikt/point12/point12_349_1.csv'        
+    },
+
+    {
+        coordinates: [17.692466, -64.852874],
+        navn: "Matrikel nr. 13, Good Hope",
+        nabolag: "West Ende Kvarter",
+        ejer: "John Smith",
+        image:'west_end_distrikt/point13/350.png',
+        csvLink: 'west_end_distrikt/point13/point13_350_1.csv'        
+    },
+    {  coordinates: [17.694081, -64.847939],
+        navn: "Matrikel nr. 14, Ruans Estate",
+        nabolag: "West Ende Kvarter",
+        ejer: "Henry Tuite, Sarah Hennen &  Rebecca Gosling",
+        image: ['west_end_distrikt/point14/352.png',
+                'west_end_distrikt/point14/354.png',
+                'west_end_distrikt/point14/355.png'],
+        csvLink: ['west_end_distrikt/point14/point14_352_1.csv',
+                    'west_end_distrikt/point14/point14_354_1.csv',
+                    'west_end_distrikt/point14/point14_355_1.csv']
+    },
+    {
+        coordinates: [17.71252, -64.84796],
+        navn: "Matrikel nr. 17, Högens Borg",
+        nabolag: "West Ende Kvarter",
+        ejer: "Timothy Long",
+        image:'west_end_distrikt/point17/358.png',
+        csvLink: 'west_end_distrikt/point17/point17_358_1.csv'        
+    },
+
+    {  coordinates: [17.708493, -64.859505],
+        navn: "Matrikel nr. 19 & nr. 7, Two Williams",
+        nabolag: "West Ende Kvarter",
+        ejer: "Thomas Bradshaw Esqr",
+        image: ['west_end_distrikt/point19/359.png',
+                'west_end_distrikt/point19/362.png'],
+        csvLink: ['west_end_distrikt/point19/point19_359_1.csv',
+                    'west_end_distrikt/point19/point19_362_1.csv']
+    },
+
+    {
+        coordinates: [17.704384, -64.864998],
+        navn: "Matrikel nr. 20 & 21, Concordia",
+        nabolag: "West Ende Kvarter",
+        ejer: "Raapz Heyliger",
+        image:'west_end_distrikt/point20/363.png',
+        csvLink: 'west_end_distrikt/point20/point20_363_1.csv'        
+    },
+
+    {
+        coordinates: [17.705222, -64.877272],
+        navn: "Matrikel nr. 22, Mars Hill",
+        nabolag: "West Ende Kvarter",
+        ejer: "Mc. Mary Fenton",
+        image:'west_end_distrikt/point22/365.png',
+        csvLink: 'west_end_distrikt/point22/point22_365_1.csv'        
+    },
+    {
+        coordinates: [17.698681, -64.881198],
+        navn: "Matrikel nr. 23, Smiths Field",
+        nabolag: "West Ende Kvarter",
+        ejer: "Seth Smith Senr",
+        image:'west_end_distrikt/point23/366.png',
+        csvLink: 'west_end_distrikt/point23/point23_366_1.csv'        
+    },
+    {
+        coordinates: [17.713726, -64.861393],
+        navn: "Matrikel nr. 25, Frederiks Hope",
+        nabolag: "West Ende Kvarter",
+        ejer: "George S: Hardieng Esqr",
+        image:'west_end_distrikt/point25/368.png',
+        csvLink: 'west_end_distrikt/point25/point25_368_1.csv'        
+    },
+    {  coordinates: [17.717589, -64.856586],
+        navn: "Matrikel nr. 26, St. Georges hill",
+        nabolag: "West Ende Kvarter",
+        ejer: "Thomas Peter & Mathew Armstrong",
+        image: ['west_end_distrikt/point26/370.png',
+                'west_end_distrikt/point26/371.png'],
+        csvLink: ['west_end_distrikt/point26/point26_370_1.csv',
+                    'west_end_distrikt/point26/point26_371_1.csv']
+    },
+
+    {  coordinates: [17.718406, -64.850106],
+        navn: "Matrikel nr. 27, Cane Valley",
+        nabolag: "West Ende Kvarter",
+        ejer: "John Gorden, Mary Ann, James Jackson & William Martin",
+        image: ['west_end_distrikt/point27/375.png',
+                'west_end_distrikt/point27/378.png',
+                'west_end_distrikt/point27/379.png',
+                'west_end_distrikt/point27/383.png'],
+        csvLink: ['West_End_distrikt/point27/point27_375_1.csv',
+                    'west_end_distrikt/point27/point27_378_1.csv',
+                    'west_end_distrikt/point27/point27_379_1.csv',
+                    'west_end_distrikt/point27/point27_383_1.csv']
+    },
+
+
+
+    {
+        coordinates: [17.726643, -64.853818],
+        navn: "Matrikel nr.28, Becks Grove",
+        nabolag: "West Ende Kvarter",
+        ejer: "William Martin",
+        image:'west_end_distrikt/point28/381.png',
+        csvLink: 'west_end_distrikt/point28/point28_381_1.csv'        
+    },
+
+
+
+    {
+        coordinates: [17.721906, -64.8641],
+        navn: "Matrikel nr.30",
+        nabolag: "West Ende Kvarter",
+        ejer: "Cosmo Gordon",
+        image:'west_end_distrikt/point30/390.png',
+        csvLink: 'west_end_distrikt/point30/point30_390_1.csv'        
+    },
+
+        {  coordinates: [17.734492, -64.855492],
+        navn: "Matrikel nr. 31, Orange Grove",
+        nabolag: "West Ende Kvarter",
+        ejer: "Henry Tuite, Sarah Hennen &  Rebecca Gosling",
+        image: ['west_end_distrikt/point14/352.png',
+                'west_end_distrikt/point14/354.png',
+                'west_end_distrikt/point14/355.png'],
+        csvLink: ['west_end_distrikt/point14/point14_352_1.csv',
+                    'west_end_distrikt/point14/point14_354_1.csv',
+                    'west_end_distrikt/point14/point14_355_1.csv']
+    },
+
+    {  coordinates: [17.727972, -64.8668],
+        navn: "Matrikel nr. 33 & 30, Little La Grange",
+        nabolag: "West Ende Kvarter",
+        ejer: "Cornelius Hendericksen Heires",
+        image: ['west_end_distrikt/point33/385.png',
+                'west_end_distrikt/point33/386.png'],
+        csvLink: ['west_end_distrikt/point33/point33_385_1.csv',
+                    'west_end_distrikt/point33/point33_386_1.csv']  },
+
+
+                    {
+        coordinates: [17.732938, -64.861779],
+        navn: "Matrikel nr. 32, Jolly Hill",
+        nabolag: "West Ende Kvarter",
+        ejer: "James Jorden Esqr",
+        image:'west_end_distrikt/point32/395.png',
+        csvLink: 'west_end_distrikt/point32/point32_395_1.csv'        
+    },
+
+
+    {  coordinates: [17.723802, -64.884696],
+        navn: "Matrikel nr. 36, Prosperity",
+        nabolag: "West Ende Kvarter",
+        ejer: "The Heirs of Isaac Markoe",
+        image: ['west_end_distrikt/point36/397.png',
+                'west_end_distrikt/point36/398.png'],
+        csvLink: ['west_end_distrikt/point36/point36_397_1.csv',
+                    'west_end_distrikt/point36/point36_398_1.csv']  },
+
+
+
+    {  coordinates: [17.705999, -64.88343],
+        navn: "Matrikel nr. 37, two brothers",
+        nabolag: "West Ende Kvarter",
+        ejer: "Richard Forster",
+        image: ['west_end_distrikt/point37/401.png',
+                'west_end_distrikt/point37/402.png'],
+        csvLink: ['west_end_distrikt/point37/point37_401_1.csv',
+                    'west_end_distrikt/point37/point37_402_1.csv']  },
+
+
+                    {
+        coordinates: [17.710251, -64.871049],
+        navn: "Matrikel nr. 39 & 38, Wheel of Fortune",
+        nabolag: "West Ende Kvarter",
+        ejer: "George S: Hardieng Esqr",
+        image:'west_end_distrikt/point38/406.png',
+        csvLink: 'west_end_distrikt/point38/point38_406_1.csv'        
+    },
+
+
+
+    {  coordinates: [17.720082, -64.879439],
+        navn: "La Grange",
+        nabolag: "West Ende Kvarter",
+        ejer: "Heirs of Count Schimmelman dead & John o Kellye",
+        image: ['west_end_distrikt/pointgrange/409.png',
+                'west_end_distrikt/pointgrange/410.png',
+                'west_end_distrikt/pointgrange/414.png'],
+        csvLink: ['west_end_distrikt/pointgrange/point_la_grange_409_1.csv',
+                    'west_end_distrikt/pointgrange/point_la_grange_410_1.csv',
+                    'west_end_distrikt/pointgrange/point_la_grange_414_1.csv']
+    },
+
+
+
+
+        ];
+
+        // Funktion til at læse CSV-data og returnere indhold som HTML med fremhævet søgeterm
+        async function getCsvContentWithHighlight(file, searchTerm, regex) {
+            return new Promise((resolve, reject) => {
+                Papa.parse(file, {
+                    download: true,
+                    complete: function(results) {
+                        let html = '<table>';
+                        results.data.forEach((row, rowIndex) => {
+                            html += '<tr>';
+                            row.forEach(cell => {
+                                let cellContent = cell;
+                                if (searchTerm && regex) {
+                                    cellContent = cellContent.replace(regex, match =>
+        `<span style="background-color: yellow;">${match}</span>`
+    );
+                                }
+                                html += rowIndex === 0
+                                    ? `<th>${cellContent}</th>`
+                                    : `<td>${cellContent}</td>`;
+                            });
+                            html += '</tr>';
+                        });
+                        html += '</table>';
+                        resolve(html);
+                    },
+                    error: function(error) {
+                        console.error(`Error loading CSV file: ${file}`, error);
+                        resolve('<p>Kunne ikke indlæse CSV-indhold.</p>');
+                    }
+                });
+         });
+         }
+
+        // Funktion til at vise CSV-indhold i fuldskærm
+        async function viewCsvFullscreen(file, searchTerm) {
+            try {
+                const regex = searchTerm
+                    ? new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi')
+                    : null;
+                const csvContent = await getCsvContentWithHighlight(file, searchTerm, regex);
+
+                const fullScreenDiv = document.createElement('div');
+                fullScreenDiv.style.position = 'fixed';
+                fullScreenDiv.style.top = '0';
+                fullScreenDiv.style.left = '0';
+                fullScreenDiv.style.width = '100%';
+                fullScreenDiv.style.height = '100%';
+                fullScreenDiv.style.backgroundColor = 'white';
+                fullScreenDiv.style.zIndex = '10000';
+                fullScreenDiv.style.overflow = 'auto';
+                fullScreenDiv.innerHTML = `
+                    <div style="padding: 20px;">
+                        <h2>Matrikel listens indhold</h2>
+                        ${csvContent}
+                    </div>
+                `;
+
+                const closeButton = document.createElement('button');
+                closeButton.textContent = 'Luk Fuldskærm';
+                closeButton.style.position = 'fixed';
+                closeButton.style.top = '10px';
+                closeButton.style.right = '10px';
+                closeButton.style.zIndex = '10001';
+                closeButton.style.padding = '10px';
+                closeButton.style.backgroundColor = '#f44336';
+                closeButton.style.color = 'white';
+                closeButton.style.border = 'none';
+                closeButton.style.borderRadius = '5px';
+                closeButton.style.cursor = 'pointer';
+                closeButton.onclick = () => {
+                    document.body.removeChild(fullScreenDiv);
+                };
+
+                fullScreenDiv.appendChild(closeButton);
+                document.body.appendChild(fullScreenDiv);
+            } catch (error) {
+                console.error('Error displaying CSV file:', error);
+                alert('Kunne ikke vise CSV-indhold.');
+            }
+        }
+
+        // Funktion til at tilføje en markør til kortet
+        async function addMarkerToMap(point, highlight = false, searchTerm = '') {
+            const marker = L.circleMarker(point.coordinates, {
+                radius: 8,
+                color: highlight ? 'blue' : '#ff7800',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).bindPopup(`
+                <div class="popup-content">
+                    <strong>Navn: ${point.navn}</strong><br>
+                    <strong>Nabolag: ${point.nabolag}</strong><br>
+                    <strong>Ejer: ${point.ejer}</strong><br>
+                    <div>
+                        <strong>Billeder:</strong><br>
+                        ${Array.isArray(point.image) ? point.image.map(img => 
+                            `<img src="${img}" alt="Billede">
+                            <button onclick="openFullscreen('${img}')">Vis i Fuldskærm</button><br>`).join('') : 
+                            `<img src="${point.image}" alt="Billede">
+                            <button onclick="openFullscreen('${point.image}')">Vis i Fuldskærm</button><br>`}
+                    </div>
+                    <div>
+                        <strong>CSV Filer:</strong><br>
+                        ${Array.isArray(point.csvLink) ? point.csvLink.map((file, index) => 
+                            `<button onclick="viewCsvFullscreen('${file}', '${searchTerm}')">Vis CSV ${index + 1} i Fuldskærm</button><br>`).join('') : 
+                            `<button onclick="viewCsvFullscreen('${point.csvLink}', '${searchTerm}')">Vis CSV i Fuldskærm</button>`}
+                    </div>
+                </div>
+            `);
+            marker.addTo(map);
+        }
+
+        // Funktion til at initialisere markører og indlæse Excel-data ved kortindlæsning
+        async function initializeMarkers() {
+            for (const point of points) {
+                await addMarkerToMap(point); // Tilføj markør og indlæs Excel-data
+            }
+        }
+
+        // Funktion til at nulstille markørfarver
+        async function resetMarkers() {
+            map.eachLayer((layer) => {
+                if (layer instanceof L.CircleMarker) {
+                    map.removeLayer(layer); // Fjern eksisterende markører
+                }
+            });
+
+            // Tilføj alle markører igen med standardfarve
+            for (const point of points) {
+                await addMarkerToMap(point, false); // Tilføj markører uden fremhævning
+            }
+        }
+
+        // Funktion til at filtrere og aktivere/deaktivere markører baseret på søgning
+        async function filterMarkers(searchTerm) {
+            await resetMarkers(); // Nulstil markører før filteret anvendes
+
+            const hitCountElement = document.getElementById('hitCount');
+
+            if (!searchTerm.trim()) {
+                hitCountElement.textContent = `Antal plantager: 0 | Antal forekomster: 0`;
+                await initializeMarkers();
+                return;
+            }
+
+            let plantationCount = 0; // Antal plantager med mindst ét hit
+            let totalHits = 0;       // Totalt antal forekomster
+            let regex;
+
+            try {
+                if (searchTerm.startsWith('"') && searchTerm.endsWith('"')) {
+                    const exactTerm = searchTerm.slice(1, -1).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                    regex = new RegExp(`\\b${exactTerm}\\b`, 'gi');
+                } else {
+                    const escapedSearchTerm = searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                    regex = new RegExp(escapedSearchTerm, 'gi');
+                }
+            } catch (error) {
+                console.error('Invalid regex:', error);
+                hitCountElement.textContent = `Ugyldig søgeterm`;
+                return;
+            }
+
+            const promises = points.map(async (point) => {
+                let match = false;
+                let localHits = 0;
+
+                // Tjek navn, nabolag og ejer
+                ['navn', 'nabolag', 'ejer'].forEach(field => {
+                    const value = point[field] || '';
+                    const matches = value.match(regex);
+                    if (matches) {
+                        localHits += matches.length;
+                    }
+                });
+
+                // Tjek CSV-filer
+                if (point.csvLink) {
+                    const csvLinks = Array.isArray(point.csvLink) ? point.csvLink : [point.csvLink];
+                    for (const file of csvLinks) {
+                        try {
+                            // Hent CSV-indhold
+                            const csvContent = await new Promise((resolve, reject) => {
+                                Papa.parse(file, {
+                                    download: true,
+                                    complete: function(results) {
+                                        // Saml alle celler til én stor tekststreng
+                                        const allCells = results.data.flat().join(' ');
+                                        resolve(allCells);
+                                    },
+                                    error: function(error) {
+                                        resolve('');
+                                    }
+                                });
+                            });
+                            const matches = csvContent.match(regex);
+                            if (matches) {
+                                localHits += matches.length;
+                            }
+                        } catch (error) {
+                            // Ignorer fejl
+                        }
+                    }
+                }
+
+                if (localHits > 0) {
+                    match = true;
+                    plantationCount++;
+                    totalHits += localHits;
+                    await addMarkerToMap(point, true, searchTerm);
+                }
+
+                return match;
+            });
+
+            await Promise.all(promises);
+
+            hitCountElement.textContent = `Antal plantager: ${plantationCount} | Antal forekomster: ${totalHits}`;
+        }
+
+        // Funktion til at åbne billedet i fuldskærm med zoom, rotation og drag funktioner
+        function openFullscreen(imgSrc) {
+            const img = document.createElement('img');
+            img.src = imgSrc;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain'; // Beholder billedets proportioner
+            img.style.position = 'absolute';
+            img.style.top = '0';
+            img.style.left = '0';
+            img.style.zIndex = '10000'; // Sørg for, at billedet er oven på alt andet
+            img.style.transform = 'scale(1) rotate(0deg)'; // Start med standard zoom og rotation
+            img.style.transition = 'transform 0.2s'; // Glidende zoom og rotation
+            img.style.filter = 'brightness(1)'; // Default brightness
+            img.style.transition = 'filter 0.2s'; // Smooth brightness adjustment
+
+            const fullScreenDiv = document.createElement('div');
+            fullScreenDiv.style.position = 'fixed';
+            fullScreenDiv.style.top = '0';
+            fullScreenDiv.style.left = '0';
+            fullScreenDiv.style.width = '100%';
+            fullScreenDiv.style.height = '100%';
+            fullScreenDiv.style.backgroundColor = 'black';
+            fullScreenDiv.style.zIndex = '9999';
+            fullScreenDiv.style.overflow = 'hidden';
+
+            let scale = 1; // Default zoom level
+            let rotation = 0; // Default rotation
+            let isDragging = false;
+            let dragEnabled = true; // Drag functionality toggle
+            let startX, startY, currentX = 0, currentY = 0;
+
+            // Add control box for zoom, rotation, drag, and brightness
+            const controlBox = document.createElement('div');
+            controlBox.style.position = 'fixed';
+            controlBox.style.bottom = '10px';
+            controlBox.style.left = '50%';
+            controlBox.style.transform = 'translateX(-50%)'; // Center the control box horizontally
+            controlBox.style.backgroundColor = 'white';
+            controlBox.style.padding = '10px';
+            controlBox.style.borderRadius = '5px';
+            controlBox.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+            controlBox.style.zIndex = '10001';
+            controlBox.innerHTML = `
+                <button id="zoomInFullscreen">Zoom +</button>
+                <button id="zoomOutFullscreen">Zoom -</button>
+                <button id="rotateLeftFullscreen">Rotér ⟲</button>
+                <button id="rotateRightFullscreen">Rotér ⟳</button>
+                <button id="toggleDragFullscreen">Deaktiver Træk</button>
+                <button id="increaseBrightness">Øg Lysstyrke</button>
+                <button id="decreaseBrightness">Reducer Lysstyrke</button>
+                <button id="closeFullscreen">Luk Fuldskærm</button>
+            `;
+
+            // Zoom in
+            controlBox.querySelector('#zoomInFullscreen').onclick = () => {
+                scale += 0.1;
+                img.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale}) rotate(${rotation}deg)`;
+            };
+
+            // Zoom out
+            controlBox.querySelector('#zoomOutFullscreen').onclick = () => {
+                scale = Math.max(0.1, scale - 0.1); // Prevent negative zoom
+                img.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale}) rotate(${rotation}deg)`;
+            };
+
+            // Rotate left
+            controlBox.querySelector('#rotateLeftFullscreen').onclick = () => {
+                rotation -= 15; // Rotate 15 degrees counterclockwise
+                img.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale}) rotate(${rotation}deg)`;
+            };
+
+            // Rotate right
+            controlBox.querySelector('#rotateRightFullscreen').onclick = () => {
+                rotation += 15; // Rotate 15 degrees clockwise
+                img.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale}) rotate(${rotation}deg)`;
+            };
+
+            // Toggle drag functionality
+            controlBox.querySelector('#toggleDragFullscreen').onclick = (event) => {
+                dragEnabled = !dragEnabled;
+                fullScreenDiv.style.cursor = dragEnabled ? 'grab' : 'default';
+                event.target.textContent = dragEnabled ? 'Deaktiver Træk' : 'Aktiver Træk';
+
+                if (!dragEnabled) {
+                    // Reset image position when drag is deactivated
+                    currentX = 0;
+                    currentY = 0;
+                    img.style.transform = `translate(0, 0) scale(${scale}) rotate(${rotation}deg)`;
+                }
+            };
+
+            // Increase brightness
+            controlBox.querySelector('#increaseBrightness').onclick = () => {
+                const currentBrightness = parseFloat(img.style.filter.match(/brightness\(([^)]+)\)/)[1]);
+                img.style.filter = `brightness(${Math.min(currentBrightness + 0.1, 2)})`; // Cap brightness at 2
+            };
+
+            // Decrease brightness
+            controlBox.querySelector('#decreaseBrightness').onclick = () => {
+                const currentBrightness = parseFloat(img.style.filter.match(/brightness\(([^)]+)\)/)[1]);
+                img.style.filter = `brightness(${Math.max(currentBrightness - 0.1, 0.5)})`; // Minimum brightness at 0.5
+            };
+
+            // Close full-screen mode
+            controlBox.querySelector('#closeFullscreen').onclick = () => {
+                document.body.removeChild(fullScreenDiv);
+                document.body.removeChild(controlBox);
+            };
+
+            // Start dragging on mousedown
+            fullScreenDiv.addEventListener('mousedown', (event) => {
+                if (dragEnabled && event.button === 0) { // Only respond to left mouse button if drag is enabled
+                    isDragging = true;
+                    startX = event.clientX - currentX;
+                    startY = event.clientY - currentY;
+                    fullScreenDiv.style.cursor = 'grabbing';
+                }
+            });
+
+            // Drag the image on mousemove
+            fullScreenDiv.addEventListener('mousemove', (event) => {
+                if (isDragging) {
+                    currentX = event.clientX - startX;
+                    currentY = event.clientY - startY;
+                    img.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale}) rotate(${rotation}deg)`;
+                }
+            });
+
+            // Stop dragging on mouseup
+            fullScreenDiv.addEventListener('mouseup', () => {
+                isDragging = false;
+                fullScreenDiv.style.cursor = dragEnabled ? 'grab' : 'default';
+            });
+
+            // Stop dragging if the mouse leaves the full-screen area
+            fullScreenDiv.addEventListener('mouseleave', () => {
+                isDragging = false;
+                fullScreenDiv.style.cursor = dragEnabled ? 'grab' : 'default';
+            });
+
+            fullScreenDiv.appendChild(img);
+            document.body.appendChild(fullScreenDiv);
+            document.body.appendChild(controlBox);
+        }
+
+        // Event listener til søgeknappen
+        document.getElementById('searchBtn').onclick = function () {
+            const searchTerm = document.getElementById('searchInput').value;
+            filterMarkers(searchTerm);
+        };
+
+        // Event listener til søgefeltet for "Enter"-tast
+        document.getElementById('searchInput').addEventListener('keypress', function (event) {
+            if (event.key === 'Enter') {
+                const searchTerm = document.getElementById('searchInput').value;
+                filterMarkers(searchTerm);
+            }
+        });
+
+        // Event listener til søgefeltet for inputændringer
+        document.getElementById('searchInput').addEventListener('input', function () {
+            const searchTerm = document.getElementById('searchInput').value;
+            if (!searchTerm.trim()) {
+                filterMarkers(''); // Reset when search is cleared
+            }
+        });
+
+        // Tilføj værktøjsboks til Leaflet-kortet
+        const toolsBox = L.control({ position: 'topright' });
+
+        toolsBox.onAdd = function () {
+            const div = L.DomUtil.create('div', 'leaflet-control tools-box');
+            div.innerHTML = `
+                <img src="https://cdn-icons-png.flaticon.com/512/1828/1828884.png" alt="Wrench and Hammer Icon" style="width: 30px; height: 30px;"> <!-- Updated to Wrench and Hammer Crossed Icon -->
+                <div style="display: none;" class="tools-content">
+                    <button id="measureBtn">Aktiver Måleværktøj</button>
+                    <button id="stopMeasureBtn" style="display:none;">Deaktiver Måleværktøj</button>
+                    <button id="coordinateBtn">Aktiver Koordinat Vælger</button>
+                </div>
+            `;
+            return div;
+        };
+
+        toolsBox.addTo(map);
+
+        // Udvid værktøjsindhold ved hover
+        document.querySelector('.leaflet-control.tools-box').addEventListener('mouseenter', function () {
+            this.querySelector('.tools-content').style.display = 'block';
+        });
+
+        document.querySelector('.leaflet-control.tools-box').addEventListener('mouseleave', function () {
+            this.querySelector('.tools-content').style.display = 'none';
+        });
+
+        // Aktiver måleværktøj
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        // Hide the rectangle, circle, and marker tools in the draw control
+        var drawControl = new L.Control.Draw({
+            edit: {
+                featureGroup: drawnItems
+            },
+            draw: {
+                polygon: true,
+                polyline: true,
+                rectangle: false, // Hide rectangle tool
+                circle: false,    // Hide circle tool
+                marker: false,    // Hide marker tool
+                circlemarker: false
+            }
+        });
+
+        document.getElementById('measureBtn').onclick = function () {
+            map.addControl(drawControl);
+            document.getElementById('measureBtn').style.display = 'none';
+            document.getElementById('stopMeasureBtn').style.display = 'block';
+        };
+
+        document.getElementById('stopMeasureBtn').onclick = function () {
+            map.removeControl(drawControl);
+            document.getElementById('measureBtn').style.display = 'block';
+            document.getElementById('stopMeasureBtn').style.display = 'none';
+        };
+
+        // Toggle coordinate picker functionality
+        let coordinatePickerActive = false;
+
+        function toggleCoordinatePicker() {
+            coordinatePickerActive = !coordinatePickerActive;
+            document.getElementById('coordinateBtn').textContent = coordinatePickerActive ? 'Deaktiver Koordinat Vælger' : 'Aktiver Koordinat Vælger';
+        }
+
+        // Ensure the coordinate picker only activates on map click when toggled
+        map.off('click'); // Remove any existing click listeners to avoid duplicates
+        map.on('click', function (event) {
+            if (coordinatePickerActive) {
+                const lat = event.latlng.lat.toFixed(5);
+                const lng = event.latlng.lng.toFixed(5);
+                alert(`Koordinater: ${lat}, ${lng}`);
+            }
+        });
+
+        // Ensure the button toggles the coordinate picker state
+        document.getElementById('coordinateBtn').addEventListener('click', toggleCoordinatePicker);
+
+        // Add zoom in and zoom out buttons to the map
+const zoomControlDiv = L.control({ position: 'topleft' });
+zoomControlDiv.onAdd = function () {
+    const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+    div.innerHTML = `
+        <button id="zoomInButton" style="display: block; margin-bottom: 5px; font-size: 18px; font-weight: bold; width: 50px; height: 50px;">+</button>
+        <button id="zoomOutButton" style="display: block; font-size: 18px; font-weight: bold; width: 50px; height: 50px;">-</button>
+    `;
+    return div;
+};
+zoomControlDiv.addTo(map);
+
+// Add functionality to the buttons
+document.getElementById('zoomInButton').onclick = () => {
+    map.zoomIn();
+};
+
+document.getElementById('zoomOutButton').onclick = () => {
+    map.zoomOut();
+};
+
+        // Update the measuring tool to handle rectangle, circle, and marker tools
+map.on('draw:created', function (event) {
+    const layer = event.layer;
+    drawnItems.addLayer(layer);
+
+    if (event.layerType === 'polygon') {
+        const latlngs = layer.getLatLngs()[0];
+        const area = L.GeometryUtil.geodesicArea(latlngs);
+        const areaInHectares = (area / 10000).toFixed(2);
+        layer.bindPopup(`Areal: ${areaInHectares} ha`).openPopup();
+    } else if (event.layerType === 'polyline') {
+        const latlngs = layer.getLatLngs();
+        let totalDistance = 0;
+
+        for (let i = 0; i < latlngs.length - 1; i++) {
+            totalDistance += latlngs[i].distanceTo(latlngs[i + 1]);
+        }
+
+        const distanceInKm = (totalDistance / 1000).toFixed(2); // Convert to kilometers
+        layer.bindPopup(`Distance: ${distanceInKm} km`).openPopup();
+    } else if (event.layerType === 'rectangle') {
+        const bounds = layer.getBounds();
+        const area = L.GeometryUtil.geodesicArea([
+            bounds.getSouthWest(),
+            bounds.getNorthWest(),
+            bounds.getNorthEast(),
+            bounds.getSouthEast()
+        ]);
+        const areaInHectares = (area / 10000).toFixed(2);
+        layer.bindPopup(`Areal: ${areaInHectares} ha`).openPopup();
+    } else if (event.layerType === 'circle') {
+        const radius = layer.getRadius();
+        const area = Math.PI * Math.pow(radius, 2);
+        const areaInHectares = (area / 10000).toFixed(2);
+        layer.bindPopup(`Areal: ${areaInHectares} ha`).openPopup();
+    } else if (event.layerType === 'marker') {
+        const latlng = layer.getLatLng();
+        layer.bindPopup(`Koordinater: ${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`).openPopup();
+    }
+});
+        // Initialiser markører, når kortet indlæses
+        initializeMarkers();
+    </script>
+</body>
+</html>
